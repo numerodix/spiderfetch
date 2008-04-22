@@ -48,6 +48,11 @@ end
 ## function to fetch with wget
 def wget url, getdata, verbose
 	begin
+		pre_output = color(:yellow, "\nFetching url #{color(:cyan, url)}... ")
+		ok_output = color(:yellow, "===> ") + color(:green, "DONE")
+		err_output = color(:yellow, "===> ") + color(:red, "FAILED")
+
+		# build execution string
 		if !verbose
 			logfile = Tempfile.new $program_name
 			logto = "-o #{logfile.path}"
@@ -58,20 +63,23 @@ def wget url, getdata, verbose
 		end
 		/^https/.match(url) and cert = "--no-check-certificate"
 		cmd = "wget -c -t#{$wget_tries} #{logto} #{saveto} #{cert} #{url}"
-		process = IO.popen cmd
-		trap('INT') { 
-			puts color(:red, "\n>>>>> Got INT")
-			#process.close
-			puts color(:red, "\n>>>>> Got INT")
-			exit 1
-		}
-		process.eof?	# block until process completes
-		process.close
+
+		# run command
+		verbose and puts pre_output
+		system(cmd)
+
+		# handle exit value
 		if $?.to_i > 0
-			output = logfile.open.read
-			print "Fetching url #{color(:yellow, url)}... "
-			puts color(:red, "FAILED"), "#{cmd}\n#{output}"
-			#raise Exception
+			# noisy mode
+			verbose and puts "\n\n#{err_output}, cmd was:\n#{cmd}"
+
+			# quiet mode
+			!verbose and output = "\n" + logfile.open.read
+			raise Exception, 
+				"#{pre_output}\n#{output}\n#{err_output}, cmd was:\n#{cmd}"
+		else
+			# noisy mode
+			verbose and puts ok_output
 		end
 		getdata and return savefile.open.read
 	ensure
@@ -86,6 +94,7 @@ begin
 	content = wget $url, true, false
 	#puts content
 rescue Exception => e
+	puts e.to_s
 	exit 1
 end
 
@@ -117,7 +126,7 @@ urls.each do |url|
 	begin
 		wget url, false, true
 	rescue Exception => e
-		retry
+		exit 1
 	end
 end
 
