@@ -58,7 +58,9 @@ def wget url, getdata, verbose
 		end
 		/^https/.match(url) and cert = "--no-check-certificate"
 		cmd = "wget -c -t#{$wget_tries} #{logto} #{saveto} #{cert} #{url}"
-		system(cmd)
+		process = IO.popen cmd
+		Signal.trap('INT') {  Process.kill('KILL', process.pid) }
+		process.eof?
 		if $?.to_i > 0
 			output = logfile.open.read
 			print "Fetching url #{color(:yellow, url)}... "
@@ -66,8 +68,6 @@ def wget url, getdata, verbose
 			raise Exception
 		end
 		getdata and return savefile.open.read
-	rescue KeyboardInterrupt
-		exit 1
 	ensure
 		logfile and logfile.close!
 		savefile and savefile.close!
@@ -89,7 +89,7 @@ urls = []
 while m = $search_string.match(content)
 	s = m.captures[0]
 	if !$protocol_filter.match(s)
-		s = URI::join($url, s).to_s
+		s = URI::join($url + '/', s).to_s
 	end
 	
 	# weed out urls that fail to match pattern
