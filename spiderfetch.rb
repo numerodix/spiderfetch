@@ -12,7 +12,7 @@ require "uri"
 
 $program_name = File.basename __FILE__
 $search_string = /<[aA][^>]+?[hH][rR][eE][fF][ ]*=?[ ]*(["'])(.*?)\1[^>]*?>/
-$protocol_filter = /^(http|https|ftp):\/\//
+$protocol_filter = /^[:alnum:]:\/\//
 $pattern = /.*/
 $dump_urls = false
 $dump_index = false
