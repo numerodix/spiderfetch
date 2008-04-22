@@ -13,7 +13,7 @@ $protocol_filter = /^(http|https|ftp):\/\//
 $pattern = /.*/
 $dump_urls = false
 
-$wget_tries = 44
+$wget_tries = 1
 
 ## parse args
 opts = OptionParser.new do |opts|
@@ -59,13 +59,19 @@ def wget url, getdata, verbose
 		/^https/.match(url) and cert = "--no-check-certificate"
 		cmd = "wget -c -t#{$wget_tries} #{logto} #{saveto} #{cert} #{url}"
 		process = IO.popen cmd
-		Signal.trap('INT') {  Process.kill('KILL', process.pid) }
-		process.eof?
+		trap('INT') { 
+			puts color(:red, "\n>>>>> Got INT")
+			#process.close
+			puts color(:red, "\n>>>>> Got INT")
+			exit 1
+		}
+		process.eof?	# block until process completes
+		process.close
 		if $?.to_i > 0
 			output = logfile.open.read
 			print "Fetching url #{color(:yellow, url)}... "
 			puts color(:red, "FAILED"), "#{cmd}\n#{output}"
-			raise Exception
+			#raise Exception
 		end
 		getdata and return savefile.open.read
 	ensure
