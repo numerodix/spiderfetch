@@ -110,8 +110,11 @@ rescue Exception => e
 end
 
 ## find urls in index
-#puts content
-urls = []
+
+# strip off eg. index.html
+$url and $url[-1..-1] != "/" and $url = $url.split("/")[0..-2].join("/")
+
+urls = []  
 while m = $search_string.match($content)
 	s = m.captures[1]
 	if !$protocol_filter.match(s)
@@ -119,7 +122,7 @@ while m = $search_string.match($content)
 	end
 	
 	# weed out urls that fail to match pattern
-	$pattern.match(s) and s[-1..-1] != '/' and urls << s
+	$pattern.match(s) and s[-1..-1] != "/" and urls << s
 
 	#puts m.end(0), m.size
 	$content = $content[m.end(0)-3+m.size..-1]
