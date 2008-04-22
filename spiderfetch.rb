@@ -126,7 +126,7 @@ while m = $search_string.match($content)
 	end
 	
 	# weed out urls that fail to match pattern
-	$pattern.match(s) and s[-1..-1] != "/" and urls << s
+	$pattern.match(s) and urls << s
 
 	$content = $content[m.end(0)-3+m.size..-1]
 	#puts "==============", $content, "----------------"
