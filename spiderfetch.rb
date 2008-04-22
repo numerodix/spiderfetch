@@ -8,24 +8,31 @@ require "tempfile"
 require "uri"
 
 $program_name = File.basename __FILE__
-$search_string = /<[ ]*[aA][ ]+[hH][rR][eE][fF][ ]*=[ ]*\"(.*?)\"[^>]*?>/
+$search_string = /<[aA][^>]+?[hH][rR][eE][fF][ ]*=?[ ]*(["'])(.*?)\1[^>]*?>/
 $protocol_filter = /^(http|https|ftp):\/\//
 $pattern = /.*/
 $dump_urls = false
+$dump_index = false
 
-$wget_tries = 1
+$wget_tries = 44
 
 ## parse args
 opts = OptionParser.new do |opts|
 	opts.banner = "Usage:  #{$program_name} <url> [<pattern>] [options]\n\n"
 
+	opts.on("--useindex [index_page]", "Use this index instead of fetching") do |v|
+		$have_index = v
+	end
 	opts.on("--dump", "Dump urls, don't fetch") do |v|
 		$dump_urls = true
+	end
+	opts.on("--dumpindex", "Dump index page") do |v|
+		$dump_index = true
 	end
 end 
 opts.parse!
 
-if ARGV.empty?
+if ARGV.empty? and !$have_index
 	puts opts.help
 	exit 1
 else
@@ -91,8 +98,12 @@ end
 
 ## fetch url
 begin
-	content = wget $url, true, false
-	#puts content
+	if $have_index
+		$content = IO.read $have_index
+	else
+		$content = wget $url, true, false
+	end
+	$dump_index and puts $content
 rescue Exception => e
 	puts e.to_s
 	exit 1
@@ -101,17 +112,17 @@ end
 ## find urls in index
 #puts content
 urls = []
-while m = $search_string.match(content)
-	s = m.captures[0]
+while m = $search_string.match($content)
+	s = m.captures[1]
 	if !$protocol_filter.match(s)
-		s = URI::join($url + '/', s).to_s
+		$url and s = URI::join($url + '/', s).to_s
 	end
 	
 	# weed out urls that fail to match pattern
 	$pattern.match(s) and s[-1..-1] != '/' and urls << s
 
 	#puts m.end(0), m.size
-	content = content[m.end(0)-3+m.size..-1]
+	$content = $content[m.end(0)-3+m.size..-1]
 	#puts "==============", content, "----------------"
 end
 urls.uniq!
