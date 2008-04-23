@@ -123,7 +123,7 @@ while m = $search_string.match($content)
 	if !$protocol_filter.match(s)
 		begin
 			$url and s = URI::join($url + "/", s).to_s
-		rescue URI::InvalidURIError
+		rescue
 			# silently ignore mangled url
 		end
 	end
