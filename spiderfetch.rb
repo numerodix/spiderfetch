@@ -5,13 +5,12 @@
 
 
 require "ftools"
-require "net/http"
 require "optparse"
 require "tempfile"
 require "uri"
 
 $program_name = File.basename __FILE__
-$search_string = /<[aA][^>]+?[hH][rR][eE][fF][ ]*=?[ ]*(["'])(.*?)\1[^>]*?>/
+$search_string = /<(?:[aA]|[rR][eE][fF])[^>]+?[hH][rR][eE][fF][ ]*=?[ ]*(["'])(.*?)\1[^>]*?>/
 $protocol_filter = /^[:alnum:]:\/\//
 $pattern = /.*/
 $dump_urls = false
