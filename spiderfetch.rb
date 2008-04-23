@@ -10,7 +10,7 @@ require "tempfile"
 require "uri"
 
 $program_name = File.basename __FILE__
-$search_string = /<(?:[aA]|[rR][eE][fF])[^>]+?[hH][rR][eE][fF][ ]*=?[ ]*(["'])(.*?)\1[^>]*?>/
+$search_string = /<[^>]+?[hH][rR][eE][fF][ ]*=?[ ]*(["'])(.*?)\1[^>]*?>/
 $protocol_filter = /^[:alnum:]:\/\//
 $pattern = /.*/
 $dump_urls = false
@@ -121,7 +121,11 @@ urls = []
 while m = $search_string.match($content)
 	s = m.captures[1]
 	if !$protocol_filter.match(s)
-		$url and s = URI::join($url + "/", s).to_s
+		begin
+			$url and s = URI::join($url + "/", s).to_s
+		rescue URI::InvalidURIError
+			# silently ignore mangled url
+		end
 	end
 	
 	# weed out urls that fail to match pattern
