@@ -10,7 +10,7 @@ require "tempfile"
 require "uri"
 
 $program_name = File.basename __FILE__
-$search_string = /<[^>]+?[hH][rR][eE][fF][ ]*=?[ ]*(["'])(.*?)\1[^>]*?>/
+$search_string = /<[^>]+?[hH][rR][eE][fF][ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/
 $protocol_filter = /^[:alnum:]:\/\//
 $pattern = /.*/
 $dump_urls = false
