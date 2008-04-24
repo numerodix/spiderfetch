@@ -23,7 +23,9 @@ $wget_ua = '--user-agent ""'  # work around picky hosts
 
 
 in_tag = /<[^>]+?(?:[hH][rR][eE][fF]|[sS][rR][cC])[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/
+noatt_tag = /<[^>]+?[:alpha:]+[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/
 uri_match = /([A-Za-z][A-Za-z0-9+.-]{1,120}:\/\/(([A-Za-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[A-Fa-f0-9]{2}){1,333}(#([a-zA-Z0-9][a-zA-Z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000}))?)/m
+toy = /(http)/
 
 $regexs = [ 
 	{:regex=>in_tag, :group=>2},
@@ -60,17 +62,19 @@ end
 
 
 ## function to colorize output 
-def color c, s
+def color c, s, *bold
 	col_num = $colors.index(c)
 	if ENV['TERM'] == "dumb" 
 		return s
 	else
-		return "\e[0;3#{col_num}m#{s}\e[0m"
+		b="0"
+		bold[0] and b="1"
+		return "\e[#{b};3#{col_num}m#{s}\e[0m"
 	end
 end
 
-def color_code c, code
-	s = color(c, "z")
+def color_code c, code, *bold
+	s = color(c, "z", *bold)
 	if code and code == -1
 		return Regexp.new("^(.*)z").match(s)[1].to_s
 	elsif code == 1
@@ -158,17 +162,20 @@ def format markers, s
 
 		code = orig_code
 		col = marker[:color]
+		col_bold = false
 
 		if code == 1 and stack.length > 1
 			col = stack[stack.length-2]
 			code = -1
+		elsif code == -1 and stack.length > 0
+			col_bold = true
 		end
 #		p [marker[:marker], [code, orig_code], [marker[:color], col], stack] ; puts
 
 		orig_code == -1 and stack << marker[:color]
 		orig_code == 1 and stack.pop
 
-		sf += s[cursor..marker[:marker]-1] + color_code(col, code)
+		sf += s[cursor..marker[:marker]-1] + color_code(col, code, col_bold)
 		cursor = marker[:marker]
 	end
 	sf += s[markers[-1][:marker]..-1]	# write segment after last match
