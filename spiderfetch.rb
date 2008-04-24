@@ -178,11 +178,14 @@ def collect_find regexs, s
 	matches = []
 	regexs.each do |regex|
 		ms = findall(regex[:regex], regex[:group], s)
-		ms = ms.each { |m| m[:color] = colors[regexs.index(regex)] }
+		ms = ms.each { |m| m[:color] = colors[regexs.index(regex)] ;
+			m[:fallback] = regexs.index(regex) }   # extra sort parameter
 		matches += ms
 	end
 	# sort to get longest match first, to wrap coloring around shorter
-	matches.sort! { |m1, m2| [m1[:start],m2[:end]] <=> [m2[:start],m1[:end]] }
+	matches.sort! { |m1, m2| 
+		[m1[:start],m2[:end],m2[:fallback]] <=> 
+		[m2[:start],m1[:end],m1[:fallback]] }
 
 	urls = []
 	matches.each do |match|
