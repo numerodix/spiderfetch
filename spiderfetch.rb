@@ -10,14 +10,25 @@ require "tempfile"
 require "uri"
 
 $program_name = File.basename __FILE__
-$search_string = /<[^>]+?(?:[hH][rR][eE][fF]|[sS][rR][cC])[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/
 $protocol_filter = /^[:alnum:]:\/\//
 $pattern = /.*/
 $dump_urls = false
 $dump_index = false
+$dump_color = false
+
+$colors = [:black, :red, :green, :yellow, :blue, :magenta, :cyan, :white]
 
 $wget_tries = 44
 $wget_ua = '--user-agent ""'  # work around picky hosts
+
+
+in_tag = /<[^>]+?(?:[hH][rR][eE][fF]|[sS][rR][cC])[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/
+uri_match = /([A-Za-z][A-Za-z0-9+.-]{1,120}:\/\/(([A-Za-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[A-Fa-f0-9]{2}){1,333}(#([a-zA-Z0-9][a-zA-Z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000}))?)/m
+
+$regexs = [ 
+	{:regex=>in_tag, :group=>2},
+	{:regex=>uri_match, :group=>1},
+]
 
 
 ## parse args
@@ -33,6 +44,9 @@ opts = OptionParser.new do |opts|
 	opts.on("--dumpindex", "Dump index page") do |v|
 		$dump_index = true
 	end
+	opts.on("--dumpcolor", "Dump index page formatted to show matches") do |v|
+		$dump_color = true
+	end
 end 
 opts.parse!
 
@@ -47,12 +61,20 @@ end
 
 ## function to colorize output 
 def color c, s
-	colors = [:black, :red, :green, :yellow, :blue, :magenta, :cyan, :white]
-	col_num = colors.index(c)
+	col_num = $colors.index(c)
 	if ENV['TERM'] == "dumb" 
 		return s
 	else
 		return "\e[0;3#{col_num}m#{s}\e[0m"
+	end
+end
+
+def color_code c, code
+	s = color(c, "z")
+	if code and code == -1
+		return Regexp.new("^(.*)z").match(s)[1].to_s
+	elsif code == 1
+		return Regexp.new("z(.*)$").match(s)[1].to_s
 	end
 end
 
@@ -73,7 +95,7 @@ def wget url, getdata, verbose
 			saveto = "-O #{savefile.path}"
 		end
 		cert = "--no-check-certificate"
-		cmd = "wget #{$wget_ua} -c -t#{$wget_tries} #{logto} #{saveto} #{cert} #{url}"
+		cmd = "wget #{$wget_ua} #{cert} -k -c -t#{$wget_tries} #{logto} #{saveto} #{url}"
 
 		# run command
 		verbose and puts pre_output
@@ -99,6 +121,90 @@ def wget url, getdata, verbose
 	end
 end
 
+def findall regex, group, s
+	cs = 0
+
+	matches = []
+	while m = regex.match(s[cs..-1])
+
+		match_start = cs + m.begin(group)
+		match_end = cs + m.end(group)
+
+		matches << {:start=>match_start, :end=>match_end}
+
+#		require 'pp'
+#		PP.singleline_pp [m.offset(group), (m.end(group)-m.begin(group)), m[group].length, m[group]]
+#		puts
+#		PP.singleline_pp [[match_start, match_end], (match_end-match_start), m[group].length, m[group]]
+#		puts
+#		PP.singleline_pp [s[match_start..match_end-1].length, s[match_start..match_end-1]]
+#		puts "\n\n"
+
+		cs = match_end
+	end
+
+	return matches
+end
+
+def format markers, s
+	markers.empty? and return color(:red, s)
+
+	sf = ""
+
+	stack = []
+	cursor = 0
+	markers.each do |marker|
+		orig_code = marker[:color] != nil ? -1 : 1
+
+		code = orig_code
+		col = marker[:color]
+
+		if code == 1 and stack.length > 1
+			col = stack[stack.length-2]
+			code = -1
+		end
+#		p [marker[:marker], [code, orig_code], [marker[:color], col], stack] ; puts
+
+		orig_code == -1 and stack << marker[:color]
+		orig_code == 1 and stack.pop
+
+		sf += s[cursor..marker[:marker]-1] + color_code(col, code)
+		cursor = marker[:marker]
+	end
+	sf += s[markers[-1][:marker]..-1]	# write segment after last match
+	return sf
+end
+
+def collect_find regexs, s
+	colors = [:green, :yellow, :cyan, :blue, :magenta, :white, :red]
+
+	matches = []
+	regexs.each do |regex|
+		ms = findall(regex[:regex], regex[:group], s)
+		ms = ms.each { |m| m[:color] = colors[regexs.index(regex)] }
+		matches += ms
+	end
+	# sort to get longest match first, to wrap coloring around shorter
+	matches.sort! { |m1, m2| [m1[:start],m2[:end]] <=> [m2[:start],m1[:end]] }
+
+	urls = []
+	matches.each do |match|
+		urls << s[match[:start]..match[:end]-1]
+	end
+
+	markers = []
+	matches.each do |match|
+		markers << {:marker=>match[:start], :color=>match[:color], 
+			:serial=>matches.index(match)}   # for later sorting by longest match
+		markers << {:marker=>match[:end], :serial=>matches.index(match)}
+	end
+	markers.sort! { |m1, m2| [m1[:marker],m1[:serial]] <=> [m2[:marker],m2[:serial]] }
+	formatted = format(markers, s)
+
+	return {:matches=>matches, :urls=>urls, :formatted=>formatted}
+end
+
+
 
 ## fetch url
 begin
@@ -107,7 +213,6 @@ begin
 	else
 		$content = wget $url, true, false
 	end
-	$dump_index and puts $content
 rescue Exception => e
 	puts e.to_s
 	exit 1
@@ -115,29 +220,19 @@ end
 
 ## find urls in index
 
-# strip off eg. index.html
-$url and $url[-1..-1] != "/" and $url = $url.split("/")[0..-2].join("/")
+findings = collect_find $regexs, $content
 
-urls = []  
-while m = $search_string.match($content)
-	s = m.captures[1]
-	if !$protocol_filter.match(s)
-		begin
-			$url and s = URI::join($url + "/", s).to_s
-		rescue
-			# silently ignore mangled url
-		end
-	end
-	
-	# weed out urls that fail to match pattern
-	$pattern.match(s) and urls << s
-
-	$content = $content[m.end(0)-3+m.size..-1]
-	#puts "==============", $content, "----------------"
-end
+urls = findings[:urls]
 urls.uniq!
 
-if $dump_urls 
+formatted = findings[:formatted]
+if $dump_color 
+	puts formatted
+	exit 0
+elsif $dump_index 
+	puts $content
+	exit 0
+elsif $dump_urls 
 	puts urls
 	exit 0
 end
