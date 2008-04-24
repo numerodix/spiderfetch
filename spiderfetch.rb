@@ -17,6 +17,7 @@ $dump_urls = false
 $dump_index = false
 
 $wget_tries = 44
+$wget_ua = '--user-agent ""'  # work around picky hosts
 
 
 ## parse args
@@ -72,7 +73,7 @@ def wget url, getdata, verbose
 			saveto = "-O #{savefile.path}"
 		end
 		/^https/.match(url) and cert = "--no-check-certificate"
-		cmd = "wget -c -t#{$wget_tries} #{logto} #{saveto} #{cert} #{url}"
+		cmd = "wget #{$wget_ua} -c -t#{$wget_tries} #{logto} #{saveto} #{cert} #{url}"
 
 		# run command
 		verbose and puts pre_output
