@@ -132,7 +132,7 @@ def findall regex, group, s
 		match_start = cs + m.begin(group)
 		match_end = cs + m.end(group)
 
-		matches << {:start=>match_start, :end=>match_end}
+		$pattern.match m[group] and matches << {:start=>match_start, :end=>match_end}
 
 		cs = match_end
 	end
