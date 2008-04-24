@@ -72,7 +72,7 @@ def wget url, getdata, verbose
 			savefile = Tempfile.new $program_name
 			saveto = "-O #{savefile.path}"
 		end
-		/^https/.match(url) and cert = "--no-check-certificate"
+		cert = "--no-check-certificate"
 		cmd = "wget #{$wget_ua} -c -t#{$wget_tries} #{logto} #{saveto} #{cert} #{url}"
 
 		# run command
