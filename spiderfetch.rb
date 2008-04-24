@@ -23,9 +23,7 @@ $wget_ua = '--user-agent ""'  # work around picky hosts
 
 
 in_tag = /<[^>]+?(?:[hH][rR][eE][fF]|[sS][rR][cC])[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/
-noatt_tag = /<[^>]+?[:alpha:]+[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/
 uri_match = /([A-Za-z][A-Za-z0-9+.-]{1,120}:\/\/(([A-Za-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[A-Fa-f0-9]{2}){1,333}(#([a-zA-Z0-9][a-zA-Z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000}))?)/m
-toy = /(http)/
 
 $regexs = [ 
 	{:regex=>in_tag, :group=>2},
@@ -164,10 +162,11 @@ def format markers, s
 		col = marker[:color]
 		col_bold = false
 
-		if code == 1 and stack.length > 1
+		if orig_code == 1 and stack.length > 1
 			col = stack[stack.length-2]
 			code = -1
-		elsif code == -1 and stack.length > 0
+			stack.length > 2 and col_bold = true
+		elsif orig_code == -1 and stack.length > 0
 			col_bold = true
 		end
 #		p [marker[:marker], [code, orig_code], [marker[:color], col], stack] ; puts
