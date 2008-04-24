@@ -134,14 +134,6 @@ def findall regex, group, s
 
 		matches << {:start=>match_start, :end=>match_end}
 
-#		require 'pp'
-#		PP.singleline_pp [m.offset(group), (m.end(group)-m.begin(group)), m[group].length, m[group]]
-#		puts
-#		PP.singleline_pp [[match_start, match_end], (match_end-match_start), m[group].length, m[group]]
-#		puts
-#		PP.singleline_pp [s[match_start..match_end-1].length, s[match_start..match_end-1]]
-#		puts "\n\n"
-
 		cs = match_end
 	end
 
@@ -169,7 +161,6 @@ def format markers, s
 		elsif orig_code == -1 and stack.length > 0
 			col_bold = true
 		end
-#		p [marker[:marker], [code, orig_code], [marker[:color], col], stack] ; puts
 
 		orig_code == -1 and stack << marker[:color]
 		orig_code == 1 and stack.pop
