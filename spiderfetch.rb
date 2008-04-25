@@ -21,7 +21,8 @@ $dump_color = false
 $colors = [:black, :red, :green, :yellow, :blue, :magenta, :cyan, :white]
 
 $wget_tries = 44
-$wget_ua = '--user-agent ""'  # work around picky hosts
+# work around picky hosts
+$wget_ua = '--user-agent "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"'
 
 
 in_tag = /<[^>]+?(?:[hH][rR][eE][fF]|[sS][rR][cC])[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/m
@@ -103,7 +104,7 @@ def wget url, getdata, verbose
 			saveto = "-O #{savefile.path}"
 		end
 		cert = "--no-check-certificate"
-		cmd = "wget #{$wget_ua} #{cert} -k -c -t#{$wget_tries} #{logto} #{saveto} #{url}"
+		cmd = "wget #{$wget_ua} #{cert} -k -c -t#{$wget_tries} #{logto} #{saveto} '#{url}'"
 
 		# run command
 		verbose and puts pre_output
@@ -253,7 +254,7 @@ else
 end
 
 findings = collect_find($regexs, content, $pattern)
-urls = findings[:urls].uniq.each { |u| u.split("\n").join("") }
+urls = findings[:urls].uniq
 formatted = findings[:formatted]
 
 if $dump_color 
