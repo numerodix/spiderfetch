@@ -167,6 +167,31 @@ def findall regex, group, s, pattern_filter
 	return matches
 end
 
+def implode_regexs regexs
+	regexs.compact!
+	regexs.map!{|r| if r.class == Regexp then r.source else r end  }
+	s = "("
+	s += regexs[0..-2].collect{|r| r + "|" }.join("")
+	s += regexs[-1]
+	s += ")"
+	return Regexp.new(s)
+end
+
+def explode_findings pattern_keys, rule, findings
+	regexs = pattern_keys.collect{|k| Regexp.new rule[k] if rule[k] }
+	pairs = pattern_keys.zip(regexs)
+	pairs.collect!{|pair| if pair[1] then pair end }.compact! # kill nulls
+
+	keys = pairs.collect{|pair| pair[0] }
+	regexs = pairs.collect{|pair| pair[1] }
+
+	arr = regexs.collect{|r| findings.collect{|f| if r.match(f) then f end }.compact}
+	hash = {}
+	keys.zip(arr).each{|pair| hash[pair[0]] = pair[1] }
+	return hash
+
+end
+
 def format markers, s
 	markers.empty? and return color(:white, s)
 
@@ -199,7 +224,7 @@ def format markers, s
 	return sf
 end
 
-def collect_find regexs, s, pattern_filter
+def collect_find regexs, s, pattern_filter, fmt
 	colors = [:green, :yellow, :cyan, :blue, :magenta, :red]
 
 	matches = []
@@ -218,17 +243,20 @@ def collect_find regexs, s, pattern_filter
 	matches.each do |match|
 		urls << s[match[:start]..match[:end]-1]
 	end
+	urls.uniq!
 
-	markers = []
-	matches.each do |match|
-		markers << {:marker=>match[:start], :color=>match[:color], 
-			:serial=>matches.index(match)}   # for later sorting by longest match
-		markers << {:marker=>match[:end], :serial=>matches.index(match)}
+	if fmt
+		markers = []
+		matches.each do |match|
+			markers << {:marker=>match[:start], :color=>match[:color], 
+				:serial=>matches.index(match)}   # for later sorting by longest match
+			markers << {:marker=>match[:end], :serial=>matches.index(match)}
+		end
+		markers.sort! { |m1, m2| [m1[:marker],m1[:serial]] <=> [m2[:marker],m2[:serial]] }
+		formatted = format(markers, s)
 	end
-	markers.sort! { |m1, m2| [m1[:marker],m1[:serial]] <=> [m2[:marker],m2[:serial]] }
-	formatted = format(markers, s)
 
-	return {:matches=>matches, :urls=>urls, :formatted=>formatted}
+	return {:urls=>urls, :formatted=>formatted}
 end
 
 def load_recipe path
@@ -242,34 +270,64 @@ def load_recipe path
 	end
 end
 
+def get_default_recipe pattern
+	action = :fetch
+	action = :dump if $dump_urls
+	action = :dumpindex if $dump_index 
+	action = :dumpcolor if $dump_color 
+	return [{action=>pattern}]
+end
+
 
 
 recipe = load_recipe $recipe_file if $recipe_file
+recipe = get_default_recipe $pattern if !recipe
+recipe[0][:useindex] = true if $index_file
 
-## fetch url
-if $index_file
-	content = IO.read $index_file
-else
-	content = fetch_index $url
-end
+cache = { :fetch => [], :spider => [$url], :dump => [] }
+data  = { :fetch => [], :spider => [$url], :dump => [] }
+while rule = recipe[0] and recipe = recipe[1..-1]
+	depth = rule[:depth] ? rule[:depth] : 1
+	while !data[:spider].empty? and (depth > 0 or depth < 0)  # REMOVE
+		depth -= 1
 
-findings = collect_find($regexs, content, $pattern)
-urls = findings[:urls].uniq
-formatted = findings[:formatted]
+		## fetch url
+		if rule[:useindex]
+			content = IO.read $index_file
+		else
+			content = data[:spider].collect { |url| fetch_index url }.join("\n")
+		end
 
-if $dump_color 
-	puts formatted
-	exit 0
-elsif $dump_index 
-	puts content
-	exit 0
-elsif $dump_urls 
-	puts urls
-	exit 0
-end
+		pattern_keys = [:fetch, :spider, :dump, :dumpindex, :dumpcolor]
 
-## fetch individual urls
-urls.each do |url|
-	fetch_file url
+		pattern_merged = implode_regexs pattern_keys.collect{|k| rule[k] }
+		findings = collect_find($regexs, content, pattern_merged, rule[:dumpcolor])
+
+		found = explode_findings pattern_keys, rule, findings[:urls]
+
+		[:fetch, :spider, :dump].each { |action|
+			if found[action]
+				data[action] = found[action] - cache[action]
+				cache[action] += data[action]
+			else
+				data[action] = []
+			end
+		}
+
+		if rule[:dumpcolor]
+			puts findings[:formatted]
+			exit 0
+		elsif rule[:dumpindex]
+			puts content
+			exit 0
+		elsif rule[:dump]
+			puts data[:dump]
+		elsif rule[:fetch]
+			data[:fetch].each do |url|
+				fetch_file url
+			end
+		end
+
+	end
 end
 
