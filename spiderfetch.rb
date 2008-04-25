@@ -189,7 +189,6 @@ def explode_findings pattern_keys, rule, findings
 	hash = {}
 	keys.zip(arr).each{|pair| hash[pair[0]] = pair[1] }
 	return hash
-
 end
 
 def format markers, s
@@ -288,23 +287,27 @@ cache = { :fetch => [], :spider => [$url], :dump => [] }
 data  = { :fetch => [], :spider => [$url], :dump => [] }
 while rule = recipe[0] and recipe = recipe[1..-1]
 	depth = rule[:depth] ? rule[:depth] : 1
-	while !data[:spider].empty? and (depth > 0 or depth < 0)  # REMOVE
+	while !data[:spider].empty? and (depth > 0 or depth < 0)
 		depth -= 1
 
-		## fetch url
+		## fetch and read index file
 		if rule[:useindex]
 			content = IO.read $index_file
 		else
 			content = data[:spider].collect { |url| fetch_index url }.join("\n")
 		end
 
+		## set up and combine patterns for matching
 		pattern_keys = [:fetch, :spider, :dump, :dumpindex, :dumpcolor]
-
 		pattern_merged = implode_regexs pattern_keys.collect{|k| rule[k] }
+
+		## do matching on every pattern in rule
 		findings = collect_find($regexs, content, pattern_merged, rule[:dumpcolor])
 
+		## filter all matches into findings by pattern
 		found = explode_findings pattern_keys, rule, findings[:urls]
 
+		## update data and cache values with new findings
 		[:fetch, :spider, :dump].each { |action|
 			if found[action]
 				data[action] = found[action] - cache[action]
