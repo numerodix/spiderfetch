@@ -23,11 +23,11 @@ $wget_ua = '--user-agent ""'  # work around picky hosts
 
 
 in_tag = /<[^>]+?(?:[hH][rR][eE][fF]|[sS][rR][cC])[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/
-uri_match = /([A-Za-z][A-Za-z0-9+.-]{1,120}:\/\/(([A-Za-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[A-Fa-f0-9]{2}){1,333}(#([a-zA-Z0-9][a-zA-Z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000}))?)/m
+uri_match = /[A-Za-z][A-Za-z0-9+.-]{1,120}:\/\/(([A-Za-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[A-Fa-f0-9]{2}){1,333}(#([a-zA-Z0-9][a-zA-Z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000}))?/m
 
 $regexs = [ 
 	{:regex=>in_tag, :group=>2},
-	{:regex=>uri_match, :group=>1},
+	{:regex=>uri_match, :group=>0},
 	{:regex=>URI::regexp, :group=>0},
 ][0..5]	  # we only have 6 colors, let's not crash from array out of bounds
 
