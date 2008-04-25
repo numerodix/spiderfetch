@@ -22,7 +22,7 @@ $wget_tries = 44
 $wget_ua = '--user-agent ""'  # work around picky hosts
 
 
-in_tag = /<[^>]+?(?:[hH][rR][eE][fF]|[sS][rR][cC])[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/
+in_tag = /<[^>]+?(?:[hH][rR][eE][fF]|[sS][rR][cC])[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/m
 uri_match = /[A-Za-z][A-Za-z0-9+.-]{1,120}:\/\/(([A-Za-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[A-Fa-f0-9]{2}){1,333}(#([a-zA-Z0-9][a-zA-Z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000}))?/m
 
 $regexs = [ 
@@ -151,24 +151,24 @@ def format markers, s
 	stack = []
 	cursor = 0
 	markers.each do |marker|
-		orig_code = marker[:color] != nil ? -1 : 1
+		orig_sym = marker[:color] != nil ? -1 : 1
 
-		code = orig_code
+		sym = orig_sym
 		col = marker[:color]
 		col_bold = false
 
-		if orig_code == 1 and stack.length > 1
-			col = stack[stack.length-2]
-			code = -1
-			stack.length > 2 and col_bold = true
-		elsif orig_code == -1 and stack.length > 0
+		if orig_sym == -1 and stack.length > 0   # adding color on top of color
 			col_bold = true
+		elsif orig_sym == 1 and stack.length > 1   # ending color with color below
+			col = stack[stack.length-2]
+			sym = -1
+			stack.length > 2 and col_bold = true   # two or more layers, make it bold
 		end
 
-		orig_code == -1 and stack << marker[:color]
-		orig_code == 1 and stack.pop
+		orig_sym == -1 and stack << marker[:color]
+		orig_sym == 1 and stack.pop
 
-		sf += s[cursor..marker[:marker]-1] + color_code(col, code, {:bold=>col_bold})
+		sf += s[cursor..marker[:marker]-1] + color_code(col, sym, {:bold=>col_bold})
 		cursor = marker[:marker]
 	end
 	sf += s[markers[-1][:marker]..-1]	# write segment after last match
