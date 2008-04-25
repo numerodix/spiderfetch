@@ -10,7 +10,7 @@ require "tempfile"
 require "uri"
 
 $program_name = File.basename __FILE__
-$protocol_filter = /^[:alnum:]:\/\//
+$protocol_filter = /^[a-zA-Z]+:\/\//
 $pattern = /.*/
 $dump_urls = false
 $dump_index = false
@@ -28,6 +28,7 @@ uri_match = /([A-Za-z][A-Za-z0-9+.-]{1,120}:\/\/(([A-Za-z0-9$_.+!*,;\/?:@&~(){}\
 $regexs = [ 
 	{:regex=>in_tag, :group=>2},
 	{:regex=>uri_match, :group=>1},
+	{:regex=>URI::regexp, :group=>0},
 ]
 
 
@@ -132,7 +133,9 @@ def findall regex, group, s
 		match_start = cs + m.begin(group)
 		match_end = cs + m.end(group)
 
-		$pattern.match m[group] and matches << {:start=>match_start, :end=>match_end}
+		if $pattern.match m[group] and $protocol_filter.match m[group]
+			matches << {:start=>match_start, :end=>match_end}
+		end
 
 		cs = match_end
 	end
@@ -141,7 +144,7 @@ def findall regex, group, s
 end
 
 def format markers, s
-	markers.empty? and return color(:red, s)
+	markers.empty? and return color(:white, s)
 
 	sf = ""
 
@@ -173,7 +176,7 @@ def format markers, s
 end
 
 def collect_find regexs, s
-	colors = [:green, :yellow, :cyan, :blue, :magenta, :white, :red]
+	colors = [:green, :yellow, :cyan, :blue, :magenta, :red]
 
 	matches = []
 	regexs.each do |regex|
