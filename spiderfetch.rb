@@ -10,6 +10,8 @@ require "tempfile"
 require "uri"
 
 $program_name = File.basename __FILE__
+$program_path = File.dirname __FILE__
+
 $protocol_filter = /^[a-zA-Z]+:\/\//
 $pattern = /.*/
 $dump_urls = false
@@ -36,8 +38,11 @@ $regexs = [
 opts = OptionParser.new do |opts|
 	opts.banner = "Usage:  #{$program_name} <url> [<pattern>] [options]\n\n"
 
-	opts.on("--useindex [index_page]", "Use this index instead of fetching") do |v|
-		$have_index = v
+	opts.on("--useindex index_page", "Use this index instead of fetching") do |v|
+		$index_file = v
+	end
+	opts.on("--recipe recipe", "Use this spidering recipe") do |v|
+		$recipe_file = v
 	end
 	opts.on("--dump", "Dump urls, don't fetch") do |v|
 		$dump_urls = true
@@ -51,7 +56,7 @@ opts = OptionParser.new do |opts|
 end 
 opts.parse!
 
-if ARGV.empty? and !$have_index
+if ARGV.empty? and !$index_file
 	puts opts.help
 	exit 1
 else
@@ -124,7 +129,25 @@ def wget url, getdata, verbose
 	end
 end
 
-def findall regex, group, s
+def fetch_url url, read_file, verbose
+	begin
+		content = wget url, read_file, verbose
+	rescue Exception => e
+		puts e.to_s
+		exit 1
+	end
+	return content
+end
+
+def fetch_index url
+	return fetch_url(url, true, false)
+end
+
+def fetch_file url
+	return fetch_url(url, false, true)
+end
+
+def findall regex, group, s, pattern_filter
 	cs = 0
 
 	matches = []
@@ -133,7 +156,7 @@ def findall regex, group, s
 		match_start = cs + m.begin(group)
 		match_end = cs + m.end(group)
 
-		if $pattern.match m[group] and $protocol_filter.match m[group]
+		if pattern_filter.match m[group] and $protocol_filter.match m[group]
 			matches << {:start=>match_start, :end=>match_end}
 		end
 
@@ -175,12 +198,12 @@ def format markers, s
 	return sf
 end
 
-def collect_find regexs, s
+def collect_find regexs, s, pattern_filter
 	colors = [:green, :yellow, :cyan, :blue, :magenta, :red]
 
 	matches = []
 	regexs.each do |regex|
-		ms = findall(regex[:regex], regex[:group], s)
+		ms = findall(regex[:regex], regex[:group], s, pattern_filter)
 		ms = ms.each { |m| m[:color] = colors[regexs.index(regex)] ;
 			m[:fallback] = regexs.index(regex) }   # extra sort parameter
 		matches += ms
@@ -207,33 +230,37 @@ def collect_find regexs, s
 	return {:matches=>matches, :urls=>urls, :formatted=>formatted}
 end
 
-
-
-## fetch url
-begin
-	if $have_index
-		$content = IO.read $have_index
-	else
-		$content = wget $url, true, false
+def load_recipe path
+	begin
+		require "#{$program_path}/#{path}"
+		return Recipe::RECIPE
+	rescue Exception => e
+		puts color(:red, "ERROR::") + "  Failed to load recipe #{path}"
+		puts e.to_s, e.backtrace
+		exit 1
 	end
-rescue Exception => e
-	puts e.to_s
-	exit 1
 end
 
-## find urls in index
 
-findings = collect_find $regexs, $content
 
-urls = findings[:urls]
-urls.uniq!
+recipe = load_recipe $recipe_file if $recipe_file
 
+## fetch url
+if $index_file
+	content = IO.read $index_file
+else
+	content = fetch_index $url
+end
+
+findings = collect_find($regexs, content, $pattern)
+urls = findings[:urls].uniq.each { |u| u.split("\n").join("") }
 formatted = findings[:formatted]
+
 if $dump_color 
 	puts formatted
 	exit 0
 elsif $dump_index 
-	puts $content
+	puts content
 	exit 0
 elsif $dump_urls 
 	puts urls
@@ -242,10 +269,6 @@ end
 
 ## fetch individual urls
 urls.each do |url|
-	begin
-		wget url, false, true
-	rescue Exception => e
-		exit 1
-	end
+	fetch_file url
 end
 
