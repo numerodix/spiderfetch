@@ -29,7 +29,7 @@ $regexs = [
 	{:regex=>in_tag, :group=>2},
 	{:regex=>uri_match, :group=>1},
 	{:regex=>URI::regexp, :group=>0},
-][0..5]	  # we only have 6 colors, let's not crash
+][0..5]	  # we only have 6 colors, let's not crash from array out of bounds
 
 
 ## parse args
@@ -67,7 +67,7 @@ def color c, s, *opt
 		return s
 	else
 		b="0"
-		opt and opt[0][:bold] and b="1"
+		opt and opt[0] and opt[0][:bold] and b="1"
 		return "\e[#{b};3#{col_num}m#{s}\e[0m"
 	end
 end
