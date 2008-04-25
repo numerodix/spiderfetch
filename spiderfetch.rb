@@ -61,19 +61,19 @@ end
 
 
 ## function to colorize output 
-def color c, s, *bold
+def color c, s, *opt
 	col_num = $colors.index(c)
 	if ENV['TERM'] == "dumb" 
 		return s
 	else
 		b="0"
-		bold and bold[0] and b="1"
+		opt and opt[0][:bold] and b="1"
 		return "\e[#{b};3#{col_num}m#{s}\e[0m"
 	end
 end
 
-def color_code c, code, *bold
-	s = color(c, "z", *bold)
+def color_code c, code, *opt
+	s = color(c, "z", *opt)
 	if code and code == -1
 		return Regexp.new("^(.*)z").match(s)[1].to_s
 	elsif code == 1
@@ -168,7 +168,7 @@ def format markers, s
 		orig_code == -1 and stack << marker[:color]
 		orig_code == 1 and stack.pop
 
-		sf += s[cursor..marker[:marker]-1] + color_code(col, code, col_bold)
+		sf += s[cursor..marker[:marker]-1] + color_code(col, code, {:bold=>col_bold})
 		cursor = marker[:marker]
 	end
 	sf += s[markers[-1][:marker]..-1]	# write segment after last match
