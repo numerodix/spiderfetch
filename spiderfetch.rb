@@ -45,6 +45,9 @@ opts = OptionParser.new do |opts|
 	opts.on("--recipe recipe", "Use this spidering recipe") do |v|
 		$recipe_file = v
 	end
+	opts.on("--fetch", "Fetch urls, don't dump") do |v|
+		$fetch_urls = true
+	end
 	opts.on("--dump", "Dump urls, don't fetch") do |v|
 		$dump_urls = true
 	end
@@ -289,6 +292,16 @@ cache = { :fetch => [], :spider => [$url], :dump => [] }
 data  = { :fetch => [], :spider => [$url], :dump => [] }
 while rule = recipe[0] and recipe = recipe[1..-1]
 	depth = rule[:depth] ? rule[:depth] : 1
+
+	## cmd line action override
+	if $fetch_urls and rule[:dump]
+		rule[:fetch] = rule[:dump]
+		rule.delete :dump
+	elsif $dump_urls and rule[:fetch]
+		rule[:dump] = rule[:fetch]
+		rule.delete :fetch
+	end
+
 	while !data[:spider].empty? and (depth > 0 or depth < 0)
 		depth -= 1
 
