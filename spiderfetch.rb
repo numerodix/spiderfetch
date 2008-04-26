@@ -14,6 +14,9 @@ $program_path = File.dirname __FILE__
 
 $protocol_filter = /^[a-zA-Z]+:\/\//
 $pattern = /.*/
+
+$host_filter = false
+$fetch_urls = false
 $dump_urls = false
 $dump_index = false
 $dump_color = false
@@ -44,6 +47,9 @@ opts = OptionParser.new do |opts|
 	end
 	opts.on("--recipe recipe", "Use this spidering recipe") do |v|
 		$recipe_file = v
+	end
+	opts.on("--host", "Only spider this host") do |v|
+		$host_filter = true
 	end
 	opts.on("--fetch", "Fetch urls, don't dump") do |v|
 		$fetch_urls = true
@@ -263,6 +269,22 @@ def collect_find regexs, s, pattern_filter, fmt
 	return {:urls=>urls, :formatted=>formatted}
 end
 
+def get_host_regex url
+	begin
+		u = URI.parse $url
+		password = ":" + u.password if u.password
+		user = ""
+		user = u.user + password + "@" if u.user and u.password
+		user = u.user + "@" if u.user
+		host = u.scheme + "://" + user + u.host
+		return Regexp.new("^" + host)
+	rescue Exception => e
+		STDERR.puts color(:red, "ERROR::") + "  Failed to parse url #{url}"
+		STDERR.puts e.to_s, e.backtrace
+		exit 1
+	end
+end
+
 def load_recipe path
 	begin
 		require "#{$program_path}/#{path}"
@@ -283,6 +305,8 @@ def get_default_recipe pattern
 end
 
 
+
+$host_regex = get_host_regex $url if $host_filter
 
 recipe = load_recipe $recipe_file if $recipe_file
 recipe = get_default_recipe $pattern if !recipe
@@ -322,6 +346,9 @@ while rule = recipe[0] and recipe = recipe[1..-1]
 		## filter all matches into findings by pattern
 		found = explode_findings pattern_keys, rule, findings[:urls]
 
+		## apply host filter
+		found[:spider].collect!{|u| u if $host_regex.match(u)}.compact! if $host_filter
+
 		## update data and cache values with new findings
 		[:fetch, :spider, :dump].each { |action|
 			if found[action]
@@ -333,7 +360,7 @@ while rule = recipe[0] and recipe = recipe[1..-1]
 		}
 
 		if rule[:dumpcolor]
-			STDOOUT.puts findings[:formatted]
+			STDOUT.puts findings[:formatted]
 			exit 0
 		elsif rule[:dumpindex]
 			STDOUT.puts content
