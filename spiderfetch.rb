@@ -180,7 +180,7 @@ end
 
 def implode_regexs regexs
 	regexs.compact!
-	regexs.map!{|r| if r.class == Regexp then r.source else r end  }
+	regexs.map!{|r| if r.class == Regexp then r.to_s else r end  }
 	s = "("
 	s += regexs[0..-2].collect{|r| r + "|" }.join("")
 	s += regexs[-1]
@@ -271,6 +271,8 @@ end
 
 def get_host_regex url
 	begin
+		raise Exception, "Url is empty" unless url
+
 		u = URI.parse $url
 		password = ":" + u.password if u.password
 		user = ""
@@ -279,7 +281,7 @@ def get_host_regex url
 		host = u.scheme + "://" + user + u.host
 		return Regexp.new("^" + host)
 	rescue Exception => e
-		STDERR.puts color(:red, "ERROR::") + "  Failed to parse url #{url}"
+		STDERR.puts color(:red, "ERROR::") + "  Failed to parse url '#{url}'"
 		STDERR.puts e.to_s, e.backtrace
 		exit 1
 	end
