@@ -21,7 +21,7 @@ $dump_color = false
 $colors = [:black, :red, :green, :yellow, :blue, :magenta, :cyan, :white]
 
 $wget_tries = 44
-# work around picky hosts
+# this should open some doors for us (IE7/Vista)
 $wget_ua = '--user-agent "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"'
 
 
@@ -32,14 +32,14 @@ $regexs = [
 	{:regex=>in_tag, :group=>2},
 	{:regex=>uri_match, :group=>0},
 	{:regex=>URI::regexp, :group=>0},
-][0..5]	  # we only have 6 colors, let's not crash from array out of bounds
+][0..5]	  # we only have 6 colors, let's not crash on array out of bounds
 
 
 ## parse args
 opts = OptionParser.new do |opts|
 	opts.banner = "Usage:  #{$program_name} <url> [<pattern>] [options]\n\n"
 
-	opts.on("--useindex index_page", "Use this index instead of fetching") do |v|
+	opts.on("--useindex index_page", "Use this index file instead of fetching") do |v|
 		$index_file = v
 	end
 	opts.on("--recipe recipe", "Use this spidering recipe") do |v|
@@ -58,7 +58,7 @@ end
 opts.parse!
 
 if ARGV.empty? and !$index_file
-	puts opts.help
+	STDERR.puts opts.help
 	exit 1
 else
 	$url = ARGV[0]
@@ -88,64 +88,66 @@ def color_code c, code, *opt
 end
 
 ## function to fetch with wget
-def wget url, getdata, verbose
+def wget url, getdata, verbose, action
 	begin
-		pre_output = color(:yellow, "\nFetching url #{color(:cyan, url)}... ")
-		ok_output = color(:yellow, "===> ") + color(:green, "DONE")
-		err_output = color(:yellow, "===> ") + color(:red, "FAILED")
+		action = "#{action}::"
+		noisy = {
+			:pre=> color(:yellow, "\nFetching url #{color(:cyan, url)} ... "),
+			:post=> "\n\n#{color(:yellow, "===> %s")}\n" }
+		quiet = {
+			:pre=> "#{action}  #{url}\r",
+			:post=> "#{action}  %s  #{url}\n" }
 
 		# build execution string
-		if !verbose
-			logfile = Tempfile.new $program_name
-			logto = "-o #{logfile.path}"
-		end
+		logto = "-o /dev/null" unless verbose
 		if getdata
 			savefile = Tempfile.new $program_name
 			saveto = "-O #{savefile.path}"
 		end
 		cert = "--no-check-certificate"
-		cmd = "wget #{$wget_ua} #{cert} -k -c -t#{$wget_tries} #{logto} #{saveto} '#{url}'"
+		cmd = "wget #{logto} #{saveto} #{$wget_ua} #{cert} -k -c -t#{$wget_tries} '#{url}' 2>&1"
 
 		# run command
-		verbose and puts pre_output
+		STDERR.puts noisy[:pre] if verbose
+		STDERR.print quiet[:pre] unless verbose
 		system(cmd)
 
 		# handle exit value
-		if $?.to_i > 0
-			# noisy mode
-			verbose and puts "\n\n#{err_output}, cmd was:\n#{cmd}"
-
-			# quiet mode
-			!verbose and output = "\n" + logfile.open.read
-			raise Exception, 
-				"#{pre_output}\n#{output}\n#{err_output}, cmd was:\n#{cmd}"
+		wget_exit = $?.to_i
+		if [2, 130].member? wget_exit
+			raise Exception, color(:yellow, "\nKilled")
+		elsif wget_exit > 0
+			quiet[:status] = color(:red, "fail")
+			noisy[:status] = "#{color(:red, "FAILED")}, cmd was:\n#{cmd}"
 		else
-			# noisy mode
-			verbose and puts ok_output
+			quiet[:status] = color(:green, "done")
+			noisy[:status] = color(:green, "DONE")
 		end
+		STDERR.printf noisy[:post], noisy[:status] if verbose
+		STDERR.printf quiet[:post], quiet[:status] unless verbose
+
 		getdata and return savefile.open.read
 	ensure
-		logfile and logfile.close!
 		savefile and savefile.close!
 	end
 end
 
-def fetch_url url, read_file, verbose
+def fetch_url url, read_file, verbose, action
 	begin
-		content = wget url, read_file, verbose
+		content = wget url, read_file, verbose, action
 	rescue Exception => e
-		puts e.to_s
+		STDERR.puts e.to_s
 		exit 1
 	end
 	return content
 end
 
 def fetch_index url
-	return fetch_url(url, true, false)
+	return fetch_url(url, true, false, "spider")
 end
 
 def fetch_file url
-	return fetch_url(url, false, true)
+	return fetch_url(url, false, true, "fetch")
 end
 
 def findall regex, group, s, pattern_filter
@@ -263,8 +265,8 @@ def load_recipe path
 		require "#{$program_path}/#{path}"
 		return Recipe::RECIPE
 	rescue Exception => e
-		puts color(:red, "ERROR::") + "  Failed to load recipe #{path}"
-		puts e.to_s, e.backtrace
+		STDERR.puts color(:red, "ERROR::") + "  Failed to load recipe #{path}"
+		STDERR.puts e.to_s, e.backtrace
 		exit 1
 	end
 end
@@ -318,13 +320,13 @@ while rule = recipe[0] and recipe = recipe[1..-1]
 		}
 
 		if rule[:dumpcolor]
-			puts findings[:formatted]
+			STDOOUT.puts findings[:formatted]
 			exit 0
 		elsif rule[:dumpindex]
-			puts content
+			STDOUT.puts content
 			exit 0
 		elsif rule[:dump]
-			puts data[:dump]
+			STDOUT.puts data[:dump]
 		elsif rule[:fetch]
 			data[:fetch].each do |url|
 				fetch_file url
