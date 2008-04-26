@@ -96,7 +96,6 @@ def color_code c, code, *opt
 	end
 end
 
-## function to fetch with wget
 def wget url, getdata, verbose, action
 	begin
 		action = "#{action}::"
