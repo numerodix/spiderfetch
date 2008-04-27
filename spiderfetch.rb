@@ -5,6 +5,7 @@
 
 
 require "ftools"
+require 'pathname'
 require "optparse"
 require "tempfile"
 require "uri"
@@ -286,12 +287,15 @@ def get_host_regex url
 	end
 end
 
-def load_recipe path
+def load_recipe file
 	begin
-		require "#{$program_path}/#{path}"
+		unless File.exist? file + ".rb"
+			file = Pathname.new($program_path).join(file).to_s
+		end
+		require file
 		return Recipe::RECIPE
 	rescue Exception => e
-		STDERR.puts color(:red, "ERROR::") + "  Failed to load recipe #{path}"
+		STDERR.puts color(:red, "ERROR::") + "  Failed to load recipe #{file}"
 		STDERR.puts e.to_s, e.backtrace
 		exit 1
 	end
