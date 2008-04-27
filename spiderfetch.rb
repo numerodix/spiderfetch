@@ -35,7 +35,7 @@ uri_match = /[A-Za-z][A-Za-z0-9+.-]{1,120}:\/\/(([A-Za-z0-9$_.+!*,;\/?:@&~(){}\[
 $regexs = [ 
 	{:regex=>in_tag, :group=>2},
 	{:regex=>uri_match, :group=>0},
-	{:regex=>URI::regexp, :group=>0},
+#	{:regex=>URI::regexp, :group=>0},
 ][0..5]	  # we only have 6 colors, let's not crash on array out of bounds
 
 
