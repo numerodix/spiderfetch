@@ -1,6 +1,6 @@
 module Recipe 
 	RECIPE = [
-		{:spider=>"\.asx$"},
-		{:dump=>"^mms:\/\/"},
+		{ :spider => "\.asx$" },
+		{ :dump => "^mms:\/\/" },
 	]
 end
