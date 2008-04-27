@@ -26,7 +26,7 @@ $colors = [:black, :red, :green, :yellow, :blue, :magenta, :cyan, :white]
 
 $wget_tries = 44
 # this should open some doors for us (IE7/Vista)
-$wget_ua = '--user-agent "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"'
+$wget_ua = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"
 
 
 in_tag = /<[^>]+?(?:[hH][rR][eE][fF]|[sS][rR][cC])[ ]*=?[ ]*(["'`])(.*?)\1[^>]*?>/m
@@ -108,18 +108,22 @@ def wget url, getdata, verbose, action
 			:post=> "#{action}  %s  #{url}\n" }
 
 		# build execution string
-		logto = "-o /dev/null" unless verbose
+		logto = "--output-file=/dev/null" unless verbose
 		if getdata
 			savefile = Tempfile.new $program_name
-			saveto = "-O #{savefile.path}"
+			saveto = "--output-document=#{savefile.path}"
 		end
+		user_agent = "--user-agent='#{$wget_ua}'"
 		cert = "--no-check-certificate"
-		cmd = "wget #{logto} #{saveto} #{$wget_ua} #{cert} -k -c -t#{$wget_tries} '#{url}' 2>&1"
+		rewrite_links = "--convert-links"
+		continue = "--continue"
+		tries = "--tries=#{$wget_tries}"
+#		cmd = "wget #{logto} #{saveto} #{user_agent} #{cert} #{rewrite_links} #{continue} #{tries} '#{url}'"
 
 		# run command
 		STDERR.puts noisy[:pre] if verbose
 		STDERR.print quiet[:pre] unless verbose
-		system(cmd)
+		system("wget", logto, saveto, user_agent, cert, rewrite_links, continue, tries, url)
 
 		# handle exit value
 		wget_exit = $?.to_i
