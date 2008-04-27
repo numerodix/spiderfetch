@@ -328,7 +328,7 @@ while rule = recipe[0] and recipe = recipe[1..-1]
 	end
 
 	while !data[:spider].empty? and (depth > 0 or depth < 0)
-		depth -= 1
+		depth -= 1 if depth > 0
 
 		## fetch and read index file
 		if rule[:useindex]
