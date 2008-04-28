@@ -105,7 +105,8 @@ def wget url, getdata, verbose, action
 			:post=> "\n\n#{color(:yellow, "===> %s")}\n" }
 		quiet = {
 			:pre=> "#{action}  #{url}\r",
-			:post=> "#{action}  %s  #{url}\n" }
+			:post=> "#{action}  %s  %s\n" }	# weird urls as part of the first
+											# argument to printf are unsafe
 
 		# build execution string
 		logto = "--output-file=/dev/null" unless verbose
@@ -137,7 +138,7 @@ def wget url, getdata, verbose, action
 			noisy[:status] = color(:green, "DONE")
 		end
 		STDERR.printf noisy[:post], noisy[:status] if verbose
-		STDERR.printf quiet[:post], quiet[:status] unless verbose
+		STDERR.printf quiet[:post], quiet[:status], url unless verbose
 
 		getdata and return savefile.open.read
 	ensure
