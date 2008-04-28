@@ -119,7 +119,7 @@ def wget url, getdata, verbose, action
 		rewrite_links = "--convert-links"
 		continue = "--continue"
 		tries = "--tries=#{$wget_tries}"
-#		cmd = "wget #{logto} #{saveto} #{user_agent} #{cert} #{rewrite_links} #{continue} #{tries} '#{url}'"
+		cmd = "wget #{logto} #{saveto} #{user_agent} #{cert} #{rewrite_links} #{continue} #{tries} '#{url}'"
 
 		# run command
 		STDERR.puts noisy[:pre] if verbose
