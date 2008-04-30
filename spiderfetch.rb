@@ -109,6 +109,7 @@ def wget url, getdata, verbose, action
 											# argument to printf are unsafe
 
 		# build execution string
+		logto = saveto = ""
 		logto = "--output-file=/dev/null" unless verbose
 		if getdata
 			savefile = Tempfile.new $program_name
