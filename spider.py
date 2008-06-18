@@ -3,7 +3,7 @@
 import itertools
 import re
 
-import shellcolor
+import shcolor
 
 
 testcases = """
@@ -26,6 +26,9 @@ host/path">
 _link = """(?ims)<\s*a[^>]+href[ ]*=?[ ]*(?P<quot>["'`])(?P<url>.*?)(?P=quot)[^>]*?>"""
 LINK = re.compile(_link)
 
+_frame = """(?ims)<\s*i?frame[^>]+src[ ]*=?[ ]*(?P<quot>["'`])(?P<url>.*?)(?P=quot)[^>]*?>"""
+FRAME = re.compile(_frame)
+
 _uri_match = """(?ims)(?P<url>[a-z][a-z0-9+.-]{1,120}:\/\/(([a-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[a-f0-9]{2}){1,333}([a-z0-9][a-z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000})?)"""
 URI_MATCH = re.compile(_uri_match)
 
@@ -33,7 +36,9 @@ def find_with_r(r, s):
     return re.finditer(r, s)
 
 def spider(s):
-    return find_with_r(LINK, s)
+    for it in [find_with_r(r, s) for r in (LINK, FRAME)]:
+        for match in it:
+            yield match
 
 def harvest(s):
     return find_with_r(URI_MATCH, s)
@@ -48,7 +53,7 @@ def colorize_shell(str):
     it = findall(str)
 
     # (match_obj, regex_serial_id, color_id)
-    it = itertools.imap(lambda (i, m): (m, i, shellcolor.map(i)), it)
+    it = itertools.imap(lambda (i, m): (m, i, shcolor.map(i)), it)
 
     tuples = [e for e in it]
     def compare(x, y):
@@ -77,7 +82,7 @@ def colorize_shell(str):
         col = color
         col_bold = False
         
-        if color:   # starting color
+        if color:   # starting new color
             stack.append(color)
         else:       # ending color
             stack.pop()
@@ -87,7 +92,7 @@ def colorize_shell(str):
         if len(stack) > 0:  # at least one layer
             col = stack[-1:].pop()
 
-        str_fmt += str[cursor:pos] + shellcolor.color_code(col, bold=col_bold)
+        str_fmt += str[cursor:pos] + shcolor.code(col, bold=col_bold)
         cursor = pos
     str_fmt += str[cursor:-1]
 
@@ -97,10 +102,10 @@ def colorize_shell(str):
 
 if __name__ == "__main__":
     import sys
+    import urllib
     try:
-        f = open(sys.argv[1], 'r')
-        data = f.read()
+        url_obj = urllib.urlopen(sys.argv[1])
+        data = url_obj.read()
     except IndexError:
         data = testcases
-    s = colorize_shell(data)
-    print s
+    print colorize_shell(data)
