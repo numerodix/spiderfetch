@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import tempfile
 import time
 import urllib
@@ -49,7 +50,7 @@ class Fetcher(object):
             s = s[0:mid-radius] + ".." + s[mid+radius:]
         return s
 
-    def format_rate(self, rate):
+    def format_size(self, rate):
         c = 0
         while rate > 1000:
             rate = rate / 1024.
@@ -62,13 +63,13 @@ class Fetcher(object):
         # compute string lengths
         action = self.action.rjust(self.actionwidth)
         if not complete:
-            rate = "%s/s" % self.format_rate(rate)
+            rate = "%s/s" % self.format_size(rate)
         else:
             rate = "done"
         rate = rate.ljust(self.ratewidth)
         size = "????? B"
         if self.totalsize:
-            size = self.format_rate(self.totalsize)
+            size = self.format_size(self.totalsize)
         size = (" %s" % size).ljust(self.sizewidth)
         line = "%s ::  %s  " % (action, rate)
         url_w = self.linewidth - len(line) - self.sizewidth
@@ -79,7 +80,7 @@ class Fetcher(object):
             rate = shcolor.color(shcolor.YELLOW, rate)
         else:
             rate = shcolor.color(shcolor.GREEN, rate)
-        if not complete and self.totalsize and self.totalsize > 0:
+        if not complete and self.totalsize:
             c = int(url_w * cursize / self.totalsize)
             url = (shcolor.code(None, reverse=True) + url[:c] + 
                    shcolor.code(None) + url[c:])
@@ -99,7 +100,7 @@ class Fetcher(object):
 
             rate = step * blocksize / interval
             cursize = blocknum * blocksize
-            if totalsize:
+            if totalsize and totalsize > 0:
                 self.totalsize = totalsize
             self.write_progress(rate, cursize)
 
@@ -128,22 +129,34 @@ class Fetcher(object):
         self.type = urlobj.info().type
         """
 
-        urllib.urlretrieve(url, filename=self.filename, reporthook=self.fetch_hook)
-        self.write_progress(None, None, complete=True)
-        # XXX catch exception to unlink tempfile
+        try:
+            urllib.urlretrieve(url, filename=self.filename, 
+                reporthook=self.fetch_hook)
+            self.write_progress(None, None, complete=True)
+        except filetype.WrongFileTypeError:
+            os.unlink(self.filename)
+            raise
+
+        return self.filename
 
     def fetch(self, url, filename):
         self.action = "fetch"
         self.typechecked = True
         self.load(url, filename=filename)
 
+    def spider(self, url):
+        self.action = "spider"
+        self.load(url)
+
 _fetcher = Fetcher()
 fetch = _fetcher.fetch
+spider = _fetcher.spider
 
 
 if __name__ == "__main__":
     import sys
     try:
-        fetch(sys.argv[2], sys.argv[1])
+        #fetch(sys.argv[2], sys.argv[1])
+        spider(sys.argv[1])
     except IndexError:
         print "Usage:  %s <url>" % sys.argv[0]
