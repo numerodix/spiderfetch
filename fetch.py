@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+import ftplib
+import httplib
 import os
+import socket
 import tempfile
 import time
 import urllib
@@ -19,6 +22,21 @@ ftp://ftp.linux.ee/pub/gentoo/distfiles/releases/x86/2007.0/stages/stage1-x86-20
 # this should open some doors for us (IE7/Vista)
 user_agent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"
 
+# don't wait forever
+socket.setdefaulttimeout(10)
+
+
+class ErrorAlreadyProcessed(Exception): pass
+
+class MyURLopener(urllib.URLopener):
+    version = user_agent
+    def __init__(self, fetcher):
+        urllib.URLopener.__init__(self)
+        self.fetcher = fetcher
+    
+#    def http_error_default(self, url, fp, errcode, errmsg, headers):
+#        self.fetcher.write_progress(error=str(errcode))
+#        raise ErrorAlreadyProcessed
 
 class Fetcher(object):
     def __init__(self):
@@ -35,9 +53,7 @@ class Fetcher(object):
         self.sizewidth = 10
         self.units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
 
-        class MyURLopener(urllib.FancyURLopener):
-            version = user_agent
-        urllib._urlopener = MyURLopener()
+        urllib._urlopener = MyURLopener(self)
 
     def write(self, s):
         sys.stdout.write(s)
@@ -59,35 +75,51 @@ class Fetcher(object):
         u = "%s" % self.units[c]
         return r.rjust(5) + " " + u.ljust(2)
 
-    def write_progress(self, rate, cursize, complete=False):
+    def write_progress(self, rate=None, cursize=None, complete=False, error=None):
         # compute string lengths
         action = self.action.rjust(self.actionwidth)
-        if not complete:
-            rate = "%s/s" % self.format_size(rate)
-        else:
+
+        if error:
+            rate = error
+        elif complete:
             rate = "done"
+        else:
+            rate = "%s/s" % self.format_size(rate)
         rate = rate.ljust(self.ratewidth)
-        size = "????? B"
+
         if self.totalsize:
             size = self.format_size(self.totalsize)
+        elif cursize:
+            size = self.format_size(cursize)
+        else:
+            size = "????? B"
         size = (" %s" % size).ljust(self.sizewidth)
+
         line = "%s ::  %s  " % (action, rate)
         url_w = self.linewidth - len(line) - self.sizewidth
         url = self.truncate_url(url_w, self.url).ljust(url_w)
 
         # add formatting
-        if not complete:
-            rate = shcolor.color(shcolor.YELLOW, rate)
-        else:
+        if error:
+            rate = shcolor.color(shcolor.RED, rate)
+        elif complete:
             rate = shcolor.color(shcolor.GREEN, rate)
-        if not complete and self.totalsize:
+        else:
+            rate = shcolor.color(shcolor.YELLOW, rate)
+
+        # draw progress bar
+        if not (error or complete) and self.totalsize:
             c = int(url_w * cursize / self.totalsize)
             url = (shcolor.code(None, reverse=True) + url[:c] + 
                    shcolor.code(None) + url[c:])
+
+        if not self.totalsize:
+            size = shcolor.color(shcolor.YELLOW, size)
+
         line = "%s ::  %s  " % (action, rate)
 
         term = "\r"
-        if complete: 
+        if error or complete: 
             term = "\n"
         self.write("%s%s%s%s" % (line, url, size, term))
 
@@ -102,7 +134,7 @@ class Fetcher(object):
             cursize = blocknum * blocksize
             if totalsize and totalsize > 0:
                 self.totalsize = totalsize
-            self.write_progress(rate, cursize)
+            self.write_progress(rate=rate, cursize=cursize)
 
         if not self.typechecked and blocknum*blocksize >= filetype.HEADER_SIZE:
             f = open(self.filename, 'r')
@@ -132,9 +164,26 @@ class Fetcher(object):
         try:
             urllib.urlretrieve(url, filename=self.filename, 
                 reporthook=self.fetch_hook)
-            self.write_progress(None, None, complete=True)
+            self.write_progress(complete=True)
         except filetype.WrongFileTypeError:
             os.unlink(self.filename)
+            raise
+        except ErrorAlreadyProcessed:
+            return
+        except IOError, exc:
+            if exc and exc.args: 
+                print exc.args
+                if len(exc.args) == 2:
+                    (_, errobj) = exc.args
+                    if type(errobj) == socket.gaierror:
+                        self.write_progress(error="dns")
+                        return
+                    elif type(errobj) == socket.error:
+                        self.write_progress(error="socket")
+                        return
+                    elif type(errobj) == ftplib.error_perm:
+                        self.write_progress(error="auth")
+                        return
             raise
 
         return self.filename
@@ -156,7 +205,7 @@ spider = _fetcher.spider
 if __name__ == "__main__":
     import sys
     try:
-        #fetch(sys.argv[2], sys.argv[1])
-        spider(sys.argv[1])
+        fetch(sys.argv[2], sys.argv[1])
+        #spider(sys.argv[1])
     except IndexError:
         print "Usage:  %s <url>" % sys.argv[0]
