@@ -113,8 +113,7 @@ class Fetcher(object):
         # draw progress bar
         if not (error or complete) and self.totalsize:
             c = int(url_w * cursize / self.totalsize)
-            url = (shcolor.code(None, reverse=True) + url[:c] + 
-                   shcolor.code(None) + url[c:])
+            url = shcolor.wrap_s(url, c, None, reverse=True)
 
         if not self.totalsize:
             size = shcolor.color(shcolor.YELLOW, size)
