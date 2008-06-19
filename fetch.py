@@ -2,6 +2,7 @@
 
 import ftplib
 import httplib
+import mimetools
 import os
 import socket
 import tempfile
@@ -17,6 +18,7 @@ http://video.fosdem.org/2008/maintracks/FOSDEM2008-cmake.ogg
 ftp://ftp.linux.ee/pub/gentoo/distfiles/releases/x86/2007.0/livecd/livecd-i686-installer-2007.0.iso
 ftp://ftp.linux.ee/pub/gentoo/distfiles/releases/x86/2007.0/installcd/install-x86-minimal-2007.0.iso
 ftp://ftp.linux.ee/pub/gentoo/distfiles/releases/x86/2007.0/stages/stage1-x86-2007.0.tar.bz2
+http://fc02.deviantart.com/fs11/i/2006/171/b/1/atomic_by_numerodix.jpg
 """
 
 # this should open some doors for us (IE7/Vista)
@@ -27,16 +29,17 @@ socket.setdefaulttimeout(10)
 
 
 class ErrorAlreadyProcessed(Exception): pass
+class ZeroDataError(Exception): pass
 
-class MyURLopener(urllib.URLopener):
+class MyURLopener(urllib.FancyURLopener):
     version = user_agent
     def __init__(self, fetcher):
-        urllib.URLopener.__init__(self)
+        urllib.FancyURLopener.__init__(self)
         self.fetcher = fetcher
     
-#    def http_error_default(self, url, fp, errcode, errmsg, headers):
-#        self.fetcher.write_progress(error=str(errcode))
-#        raise ErrorAlreadyProcessed
+    def http_error_default(self, url, fp, errcode, errmsg, headers):
+        self.fetcher.write_progress(error=str(errcode))
+        raise ErrorAlreadyProcessed
 
 class Fetcher(object):
     def __init__(self):
@@ -50,17 +53,17 @@ class Fetcher(object):
         self.linewidth = 78
         self.actionwidth = 6
         self.ratewidth = 10
-        self.sizewidth = 10
+        self.sizewidth = 9
         self.units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
 
         urllib._urlopener = MyURLopener(self)
 
     def write(self, s):
-        sys.stdout.write(s)
-        sys.stdout.flush()
+        sys.stderr.write(s)
+        sys.stderr.flush()
 
     def truncate_url(self, width, s):
-        radius = (len(s) - width + 4) / 2
+        radius = (len(s) - width + 3) / 2
         if radius > 0:
             mid = len(s) / 2
             s = s[0:mid-radius] + ".." + s[mid+radius:]
@@ -162,17 +165,26 @@ class Fetcher(object):
         """
 
         try:
-            urllib.urlretrieve(url, filename=self.filename, 
+            (filename, headers) = urllib.urlretrieve(url, filename=self.filename, 
                 reporthook=self.fetch_hook)
+
+            if isinstance(headers, mimetools.Message) and headers.fp \
+               and not headers.fp.read(1):
+                raise ZeroDataError
+
             self.write_progress(complete=True)
+            return filename
         except filetype.WrongFileTypeError:
             os.unlink(self.filename)
             raise
+        except ZeroDataError:
+            self.write_progress(error="no data")
+        except urllib.ContentTooShortError:
+            self.write_progress(error="incomplete")
         except ErrorAlreadyProcessed:
             return
         except IOError, exc:
             if exc and exc.args: 
-                print exc.args
                 if len(exc.args) == 2:
                     (_, errobj) = exc.args
                     if type(errobj) == socket.gaierror:
@@ -185,8 +197,8 @@ class Fetcher(object):
                         self.write_progress(error="auth")
                         return
             raise
-
-        return self.filename
+        except KeyboardInterrupt:
+            self.write("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
 
     def fetch(self, url, filename):
         self.action = "fetch"
