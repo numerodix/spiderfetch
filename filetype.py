@@ -21,8 +21,7 @@ class WrongFileTypeError(Exception): pass
 if __name__ == "__main__":
     import sys
     try:
-        f = open(sys.argv[1], 'r')
-        data = f.read()
+        data = open(sys.argv[1], 'r').read()
         print "is_html:  %s" % is_html(data)
     except IndexError:
         print "Usage:  %s <url>" % sys.argv[0]

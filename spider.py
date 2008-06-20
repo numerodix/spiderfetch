@@ -47,10 +47,20 @@ def findall(s):
     its = [spider(s), harvest(s)]
     for (idx, it) in enumerate(its):
         for match in it: 
+            yield match
+
+def unbox_it_to_ss(it):
+    for match in it:
+        yield match.group('url')
+
+def group_by_regex(s):
+    its = [spider(s), harvest(s)]
+    for (idx, it) in enumerate(its):
+        for match in it: 
             yield (idx, match)
 
 def colorize_shell(str):
-    it = findall(str)
+    it = group_by_regex(str)
 
     # (match_obj, regex_serial_id, color_id)
     it = itertools.imap(lambda (i, m): (m, i, shcolor.map(i)), it)
@@ -109,3 +119,5 @@ if __name__ == "__main__":
     except IndexError:
         data = testcases
     print colorize_shell(data)
+#    for url in unbox_it_to_ss(findall(data)):
+#        print url

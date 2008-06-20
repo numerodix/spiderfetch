@@ -5,6 +5,7 @@ import httplib
 import mimetools
 import os
 import socket
+import sys
 import tempfile
 import time
 import urllib
@@ -125,6 +126,15 @@ class Fetcher(object):
             term = "\n"
         self.write("%s%s%s%s" % (line, url, size, term))
 
+    def typecheck(self, filename):
+        if not self.typechecked:
+            data = open(self.filename, 'r').read()
+            if data:
+                if not filetype.is_html(data):
+                    raise filetype.WrongFileTypeError
+                self.typechecked = True
+
+
     def fetch_hook(self, blocknum, blocksize, totalsize):
         step = 15
         if blocknum % step == 0:
@@ -139,12 +149,7 @@ class Fetcher(object):
             self.write_progress(rate=rate, cursize=cursize)
 
         if not self.typechecked and blocknum*blocksize >= filetype.HEADER_SIZE:
-            f = open(self.filename, 'r')
-            data = f.read()
-            f.close()
-            if not filetype.is_html(data):
-                raise filetype.WrongFileTypeError
-            self.typechecked = True
+            self.typecheck(self.filename)
 
     def load(self, url, filename=None):
         self.filename = filename
@@ -170,6 +175,9 @@ class Fetcher(object):
             if isinstance(headers, mimetools.Message) and headers.fp \
                and not headers.fp.read(1):
                 raise ZeroDataError
+
+            if not self.typechecked:
+                self.typecheck(self.filename)
 
             self.write_progress(complete=True)
             return filename
@@ -206,7 +214,7 @@ class Fetcher(object):
 
     def spider(self, url):
         self.action = "spider"
-        self.load(url)
+        return self.load(url)
 
 _fetcher = Fetcher()
 fetch = _fetcher.fetch
@@ -214,9 +222,10 @@ spider = _fetcher.spider
 
 
 if __name__ == "__main__":
-    import sys
     try:
-        fetch(sys.argv[2], sys.argv[1])
-        #spider(sys.argv[1])
+        if sys.argv[1] == "-s":
+            spider(sys.argv[2])
+        else:
+            fetch(sys.argv[2], sys.argv[1])
     except IndexError:
-        print "Usage:  %s <url>" % sys.argv[0]
+        print "Usage:  %s [<file> <url> | -s <url>]" % sys.argv[0]
