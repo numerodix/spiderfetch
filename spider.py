@@ -129,4 +129,4 @@ if __name__ == "__main__":
         else:
             print colorize_shell(data)
     except IndexError:
-        print "Usage:  %s [<url> [-dump] | -test] " % sys.argv[0]
+        print "Usage:  %s [ <url> [-dump] | -test ] " % sys.argv[0]

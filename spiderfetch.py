@@ -14,7 +14,7 @@ filename = fetch.spider(url)
 data = open(filename, 'r').read()
 os.unlink(filename)
 
-urls = spider.unbox_it_to_ss(spider.spider(data))
+urls = spider.unbox_it_to_ss(spider.harvest(data))
 for u in urls: 
     try:
         f = fetch.spider(u)

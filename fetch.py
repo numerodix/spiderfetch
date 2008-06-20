@@ -47,10 +47,11 @@ class Fetcher(object):
         self.action = None
         self.filename = None
         self.url = None
-        self.typechecked = None
         self.timestamp = None
         self.download_size = None
         self.totalsize = None
+
+        self.typechecked = None
 
         self.linewidth = 78
         self.actionwidth = 6
@@ -130,19 +131,25 @@ class Fetcher(object):
             term = "\n"
         self.write("%s%s%s%s" % (line, url, size, term))
 
-    def typecheck(self, filename):
+    def typecheck_html(self, filename):
         if not self.typechecked:
             data = open(self.filename, 'r').read()
             if data:
-                if not filetype.is_html(data):
+                if filetype.is_html(data):
+                    self.typechecked = True
+
+    def typecheck_urls(self, filename):
+        if not self.typechecked:
+            data = open(self.filename, 'r').read()
+            if data:
+                if not filetype.has_urls(data):
                     raise filetype.WrongFileTypeError
                 self.typechecked = True
-
 
     def fetch_hook(self, blocknum, blocksize, totalsize):
         self.download_size = blocknum * blocksize
 
-        step = 10
+        step = 12
         if blocknum % step == 0:
             t = time.time()
             interval = t - self.timestamp
@@ -153,8 +160,11 @@ class Fetcher(object):
                 self.totalsize = totalsize
             self.write_progress(rate=rate)
 
-        if not self.typechecked and self.download_size >= filetype.HEADER_SIZE:
-            self.typecheck(self.filename)
+        if not self.typechecked:
+            if self.download_size >= filetype.HEADER_SIZE_HTML:
+                self.typecheck_html(self.filename)
+            if self.download_size >= filetype.HEADER_SIZE_URLS:
+                self.typecheck_urls(self.filename)
 
     def load(self, url, filename=None):
         self.filename = filename
@@ -162,7 +172,7 @@ class Fetcher(object):
         self.timestamp = time.time()
 
         if not self.filename:
-            (_, self.filename) = tempfile.mkstemp()
+            (_, self.filename) = tempfile.mkstemp(prefix=sys.argv[0] + ".")
 
         """This demonstrates getting the filetype from the HTTP header, which
         is available in the field Content-Type. However, this field is only
@@ -182,7 +192,9 @@ class Fetcher(object):
                 raise ZeroDataError
 
             if not self.typechecked:
-                self.typecheck(self.filename)
+                self.typecheck_html(self.filename)
+            if not self.typechecked:
+                self.typecheck_urls(self.filename)
 
             self.write_progress(complete=True)
             return filename
@@ -230,10 +242,16 @@ spider = _fetcher.spider
 if __name__ == "__main__":
     try:
         if sys.argv[1] == "-s":
-            spider(sys.argv[2])
+            try:
+                spider(sys.argv[2])
+            except filetype.WrongFileTypeError:
+                pass
         else:
-            fetch(sys.argv[2], sys.argv[1])
+            filename = "/dev/null"
+            if len(sys.argv) > 2:
+                filename = sys.argv[2]
+            fetch(sys.argv[1], filename)
     except KeyboardInterrupt:
         Fetcher().write_abort()
     except IndexError:
-        print "Usage:  %s [<file> <url> | -s <url>]" % sys.argv[0]
+        print "Usage:  %s [ <url> [<file>] | -s <url> ]" % sys.argv[0]
