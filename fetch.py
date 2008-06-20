@@ -56,7 +56,7 @@ class Fetcher(object):
         self.linewidth = 78
         self.actionwidth = 6
         self.ratewidth = 10
-        self.sizewidth = 9
+        self.sizewidth = 10
         self.units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
 
         urllib._urlopener = MyURLopener(self)
@@ -102,7 +102,7 @@ class Fetcher(object):
             size = self.format_size(self.download_size)
         else:
             size = "????? B"
-        size = (" %s" % size).ljust(self.sizewidth)
+        size = ("  %s" % size).ljust(self.sizewidth)
 
         line = "%s ::  %s  " % (action, rate)
         url_w = self.linewidth - len(line) - self.sizewidth
@@ -207,7 +207,7 @@ class Fetcher(object):
         except urllib.ContentTooShortError:
             self.write_progress(error="incomplete")
         except ErrorAlreadyProcessed:
-            return
+            pass
         except IOError, exc:
             if exc and exc.args: 
                 if len(exc.args) == 2:
@@ -215,12 +215,19 @@ class Fetcher(object):
                     if type(errobj) == socket.gaierror:
                         self.write_progress(error="dns")
                         return
+                    elif type(errobj) == socket.timeout:
+                        self.write_progress(error="timeout")
+                        return
                     elif type(errobj) == socket.error:
                         self.write_progress(error="socket")
                         return
                     elif type(errobj) == ftplib.error_perm:
                         self.write_progress(error="auth")
                         return
+
+            import pickle
+            pickle.dump(exc, open('exc', 'w'))
+
             raise
 
     def fetch(self, url, filename):

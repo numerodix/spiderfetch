@@ -6,6 +6,8 @@ import re
 import shcolor
 
 
+SPIDER_SCHEMES = ["ftp", "http", "https"]
+
 testcases = """
 <a href="http://1host/path">
 <a href="http://2host/path" >
