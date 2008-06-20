@@ -49,6 +49,7 @@ class Fetcher(object):
         self.url = None
         self.typechecked = None
         self.timestamp = None
+        self.download_size = None
         self.totalsize = None
 
         self.linewidth = 78
@@ -62,6 +63,9 @@ class Fetcher(object):
     def write(self, s):
         sys.stderr.write(s)
         sys.stderr.flush()
+
+    def write_abort(self):
+        self.write("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
 
     def truncate_url(self, width, s):
         radius = (len(s) - width + 3) / 2
@@ -79,7 +83,7 @@ class Fetcher(object):
         u = "%s" % self.units[c]
         return r.rjust(5) + " " + u.ljust(2)
 
-    def write_progress(self, rate=None, cursize=None, complete=False, error=None):
+    def write_progress(self, rate=None, complete=False, error=None):
         # compute string lengths
         action = self.action.rjust(self.actionwidth)
 
@@ -93,8 +97,8 @@ class Fetcher(object):
 
         if self.totalsize:
             size = self.format_size(self.totalsize)
-        elif cursize:
-            size = self.format_size(cursize)
+        elif self.download_size:
+            size = self.format_size(self.download_size)
         else:
             size = "????? B"
         size = (" %s" % size).ljust(self.sizewidth)
@@ -113,7 +117,7 @@ class Fetcher(object):
 
         # draw progress bar
         if not (error or complete) and self.totalsize:
-            c = int(url_w * cursize / self.totalsize)
+            c = int(url_w * self.download_size / self.totalsize)
             url = shcolor.wrap_s(url, c, None, reverse=True)
 
         if not self.totalsize:
@@ -136,19 +140,20 @@ class Fetcher(object):
 
 
     def fetch_hook(self, blocknum, blocksize, totalsize):
-        step = 15
+        self.download_size = blocknum * blocksize
+
+        step = 10
         if blocknum % step == 0:
             t = time.time()
             interval = t - self.timestamp
             self.timestamp = t
 
             rate = step * blocksize / interval
-            cursize = blocknum * blocksize
             if totalsize and totalsize > 0:
                 self.totalsize = totalsize
-            self.write_progress(rate=rate, cursize=cursize)
+            self.write_progress(rate=rate)
 
-        if not self.typechecked and blocknum*blocksize >= filetype.HEADER_SIZE:
+        if not self.typechecked and self.download_size >= filetype.HEADER_SIZE:
             self.typecheck(self.filename)
 
     def load(self, url, filename=None):
@@ -183,6 +188,7 @@ class Fetcher(object):
             return filename
         except filetype.WrongFileTypeError:
             os.unlink(self.filename)
+            self.write_progress(error="wrong type")
             raise
         except ZeroDataError:
             self.write_progress(error="no data")
@@ -204,8 +210,6 @@ class Fetcher(object):
                         self.write_progress(error="auth")
                         return
             raise
-        except KeyboardInterrupt:
-            self.write("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
 
     def fetch(self, url, filename):
         self.action = "fetch"
@@ -214,9 +218,11 @@ class Fetcher(object):
 
     def spider(self, url):
         self.action = "spider"
+        self.typechecked = False
         return self.load(url)
 
 _fetcher = Fetcher()
+write_abort = _fetcher.write_abort
 fetch = _fetcher.fetch
 spider = _fetcher.spider
 
@@ -227,5 +233,7 @@ if __name__ == "__main__":
             spider(sys.argv[2])
         else:
             fetch(sys.argv[2], sys.argv[1])
+    except KeyboardInterrupt:
+        Fetcher().write_abort()
     except IndexError:
         print "Usage:  %s [<file> <url> | -s <url>]" % sys.argv[0]
