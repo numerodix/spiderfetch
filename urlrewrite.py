@@ -18,6 +18,7 @@ def rewrite_scheme(scheme):
     return scheme
 
 def rewrite_urls(origin_url, urls):
+    origin_pack = urlparse.urlsplit(origin_url)
     for u in urls:
         pack = urlparse.urlsplit(u)
         (scheme, netloc, path, query, fragment) = pack
@@ -25,6 +26,17 @@ def rewrite_urls(origin_url, urls):
         # try to rewrite scheme
         scheme = rewrite_scheme(pack.scheme)
 
+        # rewrite netloc to include credentials
+        if origin_pack.username and pack.hostname == origin_pack.hostname:
+            username = origin_pack.username
+            if origin_pack.password:
+                username = "%s:%s" % (origin_pack.username, origin_pack.password)
+            hostname = pack.hostname
+            if pack.port:
+                hostname = "%s:%s" % (pack.hostname, pack.port)
+            netloc = "%s@%s" % (username, hostname)
+
+        # reassemble into url
         new_u = urlparse.urlunsplit((scheme, netloc, path, query, None))
 
         # no scheme or netloc, it's a path on-site
@@ -37,9 +49,15 @@ def rewrite_urls(origin_url, urls):
 
         # XXX error handling
 
+def unique(it):
+    seen = set()
+    return [x for x in it if x not in seen and not seen.add(x)]
+
+
 
 if __name__ == "__main__":
-    base = "http://www.juventuz.com/forum/search.php?searchid=1186852"
-    urls = ["../index.php?name=jack&act=whatever"]
+    base = "http://user:pass@www.juventuz.com/forum/search.php?searchid=1186852"
+    urls = ["../index.php?name=jack&act=whatever",
+            "http://www.juventuz.com/matches"]
     for u in rewrite_urls(base, urls):
         print u

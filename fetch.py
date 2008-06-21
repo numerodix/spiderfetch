@@ -6,7 +6,6 @@ import mimetools
 import os
 import socket
 import sys
-import tempfile
 import time
 import urllib
 
@@ -31,6 +30,10 @@ socket.setdefaulttimeout(10)
 
 class ErrorAlreadyProcessed(Exception): pass
 class ZeroDataError(Exception): pass
+class ChangedUrlWarning(Exception):
+    def __init__(self, new_url):
+        self.new_url = new_url
+
 
 class MyURLopener(urllib.FancyURLopener):
     version = user_agent
@@ -41,6 +44,17 @@ class MyURLopener(urllib.FancyURLopener):
     def http_error_default(self, url, fp, errcode, errmsg, headers):
         self.fetcher.write_progress(error=str(errcode))
         raise ErrorAlreadyProcessed
+
+    def prompt_user_passwd(self, host, realm):
+        """Don't prompt for credentials"""
+        return None, None
+
+    def redirect_internal(self, url, fp, errcode, errmsg, headers, data):
+        if 'location' in headers:
+            newurl = headers['location']
+        elif 'uri' in headers:
+            newurl = headers['uri']
+        raise ChangedUrlWarning(newurl)
 
 class Fetcher(object):
     def __init__(self):

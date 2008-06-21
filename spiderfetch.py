@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-import sets
 import sys
 import tempfile
 
@@ -30,14 +29,19 @@ while queue:
 
             urls = spider.unbox_it_to_ss(spider.findall(data))
             urls = urlrewrite.rewrite_urls(url, urls)
-            urls = list(sets.Set(urls))
 
             queue.extend(urls)
         except KeyboardInterrupt:
             fetch.write_abort()
             sys.exit(1)
+        except fetch.ChangedUrlWarning, e:
+            queue.append(e.new_url)
         except IOError:
             print "url failed: %s" % url
         finally:
             if os.path.exists(filename):
                 os.unlink(filename)
+
+    if queue:
+        queue = urlrewrite.unique(queue)
+
