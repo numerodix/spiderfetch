@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 import os
+import pickle
 import sys
 import tempfile
+import traceback
 
 import fetch
 import filetype
@@ -38,20 +40,20 @@ while queue:
                     queue.append(u)
                     web.add_url(url, [u])
 
-        except KeyboardInterrupt:
-            import pickle
-            pickle.dump(web, open('web', 'w'), protocol=pickle.HIGHEST_PROTOCOL)
-            sys.exit(1)
-        except IOError, e:
-            print e
-            print "bad url: " + url
-            node = web.get(url)
-            for u in node.incoming.keys():
-                print "ref    : " + u
-            raise
         except fetch.ChangedUrlWarning, e:
             web.add_ref(url, e.new_url)
             queue.append(e.new_url)
+        except KeyboardInterrupt:
+            #pickle.dump(web, open('web', 'w'), protocol=pickle.HIGHEST_PROTOCOL)
+            sys.exit(1)
+        except IOError, e:
+            s = traceback.format_exc()
+            s += "\nbad url:   |%s|\n" % url
+            node = web.get(url)
+            for u in node.incoming.keys():
+                s += "ref    :   |%s|\n" % u
+            s += "\n"
+            open("error_log", "a").write(s)
         finally:
             if filename and os.path.exists(filename):
                 os.unlink(filename)

@@ -78,6 +78,7 @@ class Fetcher(object):
     def write(self, s):
         sys.stderr.write(s)
         sys.stderr.flush()
+        open('log', 'a').write("%s\n" % s)  # XXX log
 
     def write_abort(self):
         self.write("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
@@ -235,12 +236,7 @@ class Fetcher(object):
                     elif type(errobj) == ftplib.error_perm:
                         self.write_progress(error="auth")
                         return
-                    elif errobj == "unknown url type":
-                        self.write_progress(error="url error")
-                        return
-            import pickle
-            pickle.dump(exc, open('exc', 'w'))
-
+            self.write_progress(error="url error")
             raise
         except KeyboardInterrupt:
             self.write_abort()
@@ -265,14 +261,21 @@ if __name__ == "__main__":
     try:
         filename = "/dev/null"
         if sys.argv[1] == "-s":
+            import tempfile
+            (_, filename) = tempfile.mkstemp(prefix=sys.argv[0] + ".")
             try:
                 spider(sys.argv[2], filename)
-            except filetype.WrongFileTypeError:
-                pass
+            except ChangedUrlWarning, e:
+                spider(e.new_url, filename)
         else:
-            if len(sys.argv) > 2:
-                filename = sys.argv[2]
-            fetch(sys.argv[1], filename)
+            try:
+                if len(sys.argv) > 2:
+                    filename = sys.argv[2]
+                fetch(sys.argv[1], filename)
+            except ChangedUrlWarning, e:
+                fetch(e.new_url, filename)
+    except filetype.WrongFileTypeError:
+        pass
     except KeyboardInterrupt:
         sys.exit()
     except IndexError:
