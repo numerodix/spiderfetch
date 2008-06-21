@@ -17,6 +17,16 @@ def rewrite_scheme(scheme):
         return m.group('scheme')
     return scheme
 
+def assemble_netloc(username, password, hostname, port):
+    netloc = hostname
+    if username:
+        if password:
+            username = "%s:%s" % (username, password)
+        netloc = "%s@%s" % (username, hostname)
+    if port:
+        netloc = "%s:%s" % (netloc, port)
+    return netloc
+
 def rewrite_urls(origin_url, urls):
     origin_pack = urlparse.urlsplit(origin_url)
     for u in urls:
@@ -28,13 +38,8 @@ def rewrite_urls(origin_url, urls):
 
         # rewrite netloc to include credentials
         if origin_pack.username and pack.hostname == origin_pack.hostname:
-            username = origin_pack.username
-            if origin_pack.password:
-                username = "%s:%s" % (origin_pack.username, origin_pack.password)
-            hostname = pack.hostname
-            if pack.port:
-                hostname = "%s:%s" % (pack.hostname, pack.port)
-            netloc = "%s@%s" % (username, hostname)
+            netloc = assemble_netloc(origin_pack.username,\
+                        origin_pack.password, pack.hostname, pack.port)
 
         # reassemble into url
         new_u = urlparse.urlunsplit((scheme, netloc, path, query, None))

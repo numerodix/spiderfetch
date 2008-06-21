@@ -259,13 +259,13 @@ spider = _fetcher.spider
 
 if __name__ == "__main__":
     try:
+        filename = "/dev/null"
         if sys.argv[1] == "-s":
             try:
-                spider(sys.argv[2])
+                spider(sys.argv[2], filename)
             except filetype.WrongFileTypeError:
                 pass
         else:
-            filename = "/dev/null"
             if len(sys.argv) > 2:
                 filename = sys.argv[2]
             fetch(sys.argv[1], filename)
