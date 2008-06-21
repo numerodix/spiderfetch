@@ -26,7 +26,7 @@ while queue:
     
     for url in working_set: 
         try:
-            (_, filename) = tempfile.mkstemp(prefix=sys.argv[0] + ".")
+            (fp, filename) = tempfile.mkstemp(prefix=sys.argv[0] + ".")
             fetch.spider(url, filename)
             data = open(filename, 'r').read()
 
@@ -46,8 +46,8 @@ while queue:
         except fetch.ChangedUrlWarning, e:
             web.add_ref(url, e.new_url)
             queue.append(e.new_url)
-        except IOError:
-            print "url failed: %s" % url
         finally:
             if filename and os.path.exists(filename):
                 os.unlink(filename)
+            if fp:
+                os.close(fp)

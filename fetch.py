@@ -235,7 +235,9 @@ class Fetcher(object):
                     elif type(errobj) == ftplib.error_perm:
                         self.write_progress(error="auth")
                         return
-
+                    elif errobj == "unknown url type":
+                        self.write_progress(error="url error")
+                        return
             import pickle
             pickle.dump(exc, open('exc', 'w'))
 
