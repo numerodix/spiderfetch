@@ -9,7 +9,7 @@ class Node(object):
         self.incoming = {}
         self.outgoing = {}
 
-class UrlGraph(object):
+class Web(object):
     def __init__(self):
         self.root = None
         self.index = {}
@@ -32,7 +32,7 @@ class UrlGraph(object):
 
 
 if __name__ == "__main__":
-    g = UrlGraph()
+    g = Web()
     g.add_url("no", ["ntnu", "aftenposten"])
     g.add_url("ntnu", ["itea", "ark"])
     print "root:  %s" % g.root.url

@@ -166,13 +166,10 @@ class Fetcher(object):
             if self.download_size >= filetype.HEADER_SIZE_URLS:
                 self.typecheck_urls(self.filename)
 
-    def load(self, url, filename=None):
+    def load(self, url, filename):
         self.filename = filename
         self.url = url
         self.timestamp = time.time()
-
-        if not self.filename:
-            (_, self.filename) = tempfile.mkstemp(prefix=sys.argv[0] + ".")
 
         """This demonstrates getting the filetype from the HTTP header, which
         is available in the field Content-Type. However, this field is only
@@ -184,7 +181,7 @@ class Fetcher(object):
         """
 
         try:
-            (filename, headers) = urllib.urlretrieve(url, filename=self.filename, 
+            (_, headers) = urllib.urlretrieve(url, filename=self.filename, 
                 reporthook=self.fetch_hook)
 
             if isinstance(headers, mimetools.Message) and headers.fp \
@@ -197,9 +194,7 @@ class Fetcher(object):
                 self.typecheck_urls(self.filename)
 
             self.write_progress(complete=True)
-            return filename
         except filetype.WrongFileTypeError:
-            os.unlink(self.filename)
             self.write_progress(error="wrong type")
             raise
         except ZeroDataError:
@@ -233,12 +228,12 @@ class Fetcher(object):
     def fetch(self, url, filename):
         self.action = "fetch"
         self.typechecked = True
-        self.load(url, filename=filename)
+        self.load(url, filename)
 
-    def spider(self, url):
+    def spider(self, url, filename):
         self.action = "spider"
         self.typechecked = False
-        return self.load(url)
+        self.load(url, filename)
 
 _fetcher = Fetcher()
 write_abort = _fetcher.write_abort
