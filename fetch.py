@@ -196,7 +196,6 @@ class Fetcher(object):
             self.write_progress(complete=True)
         except filetype.WrongFileTypeError:
             self.write_progress(error="wrong type")
-            raise
         except ZeroDataError:
             self.write_progress(error="no data")
         except urllib.ContentTooShortError:
@@ -212,6 +211,9 @@ class Fetcher(object):
                         return
                     elif type(errobj) == socket.timeout:
                         self.write_progress(error="timeout")
+                        return
+                    elif type(errobj) == socket.sslerror:
+                        self.write_progress(error="ssl")
                         return
                     elif type(errobj) == socket.error:
                         self.write_progress(error="socket")
