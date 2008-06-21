@@ -242,6 +242,9 @@ class Fetcher(object):
             pickle.dump(exc, open('exc', 'w'))
 
             raise
+        except KeyboardInterrupt:
+            self.write_abort()
+            raise
 
     def fetch(self, url, filename):
         self.action = "fetch"
@@ -254,7 +257,6 @@ class Fetcher(object):
         self.load(url, filename)
 
 _fetcher = Fetcher()
-write_abort = _fetcher.write_abort
 fetch = _fetcher.fetch
 spider = _fetcher.spider
 
@@ -272,6 +274,6 @@ if __name__ == "__main__":
                 filename = sys.argv[2]
             fetch(sys.argv[1], filename)
     except KeyboardInterrupt:
-        Fetcher().write_abort()
+        sys.exit()
     except IndexError:
         print "Usage:  %s [ <url> [<file>] | -s <url> ]" % sys.argv[0]

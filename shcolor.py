@@ -3,7 +3,7 @@
 import os
 
 
-_disable = "TERM" in os.environ and os.environ["TERM"] == "dumb"
+_disable = os.environ.get("TERM") == "dumb"
 
 BLACK = 0
 RED = 1

@@ -30,6 +30,10 @@ def assemble_netloc(username, password, hostname, port):
 def rewrite_urls(origin_url, urls):
     origin_pack = urlparse.urlsplit(origin_url)
     for u in urls:
+        # kill breaks
+        if u:
+            u = re.sub("(\n|\t)", "", u)
+
         pack = urlparse.urlsplit(u)
         (scheme, netloc, path, query, fragment) = pack
 

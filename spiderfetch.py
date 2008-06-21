@@ -39,15 +39,23 @@ while queue:
                     web.add_url(url, [u])
 
         except KeyboardInterrupt:
-            fetch.write_abort()
             import pickle
             pickle.dump(web, open('web', 'w'), protocol=pickle.HIGHEST_PROTOCOL)
             sys.exit(1)
+        except IOError, e:
+            print e
+            print "bad url: " + url
+            node = web.get(url)
+            for u in node.incoming.keys():
+                print "ref    : " + u
+            raise
         except fetch.ChangedUrlWarning, e:
             web.add_ref(url, e.new_url)
             queue.append(e.new_url)
         finally:
             if filename and os.path.exists(filename):
                 os.unlink(filename)
-            if fp:
+            try:
                 os.close(fp)
+            except:
+                pass

@@ -42,6 +42,9 @@ class Web(object):
     def add_ref(self, url, new_url):
         self.index[new_url] = self.index[url]
 
+    def get(self, url):
+        return self.index.get(url)
+
 
 
 if __name__ == "__main__":
