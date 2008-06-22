@@ -87,8 +87,9 @@ class Fetcher(object):
     def write_abort(self):
         self.write_err("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
 
-    def log_url(error):
-        line = "%s  %s\n" % (error.ljust(10), url)
+    def log_url(self, error):
+        error = error.replace(" ", "_")
+        line = "%s  %s\n" % (error.ljust(10), self.url)
         open("error_urls", "a").write(line)
 
     def truncate_url(self, width, s):
