@@ -22,6 +22,11 @@ web.add_url(url, [])
 def write_out(s):
     sys.stdout.write(s)
 
+def save_web(web):
+    hostname = urlrewrite.get_hostname(web.root.url)
+    filename = urlrewrite.hostname_to_filename(hostname) + ".web"
+    io.serialize(web, filename)
+
 def get_url_w_redirects(getter, url, filename):
     """http 30x redirects produce a recursion with new urls that may or may not
     have been seen before"""
@@ -80,6 +85,7 @@ def process_record(record, rule, queue, web):
     except fetch.DuplicateUrlWarning:
         pass
     except KeyboardInterrupt:
+        save_web(web)
         sys.exit(1)
     except Exception, e:
         s = traceback.format_exc()

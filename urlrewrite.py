@@ -69,6 +69,9 @@ def url_to_filename(url):
     filename = "_".join([x for x in (scheme, netloc, path, query) if x])
     return re.sub("[^a-zA-Z0-9]", "_", filename) + ext
 
+def hostname_to_filename(url):
+    return re.sub("[^a-zA-Z0-9]", "_", url)
+
 def unique(it):
     seen = set()
     return [x for x in it if x not in seen and not seen.add(x)]

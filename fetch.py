@@ -82,10 +82,14 @@ class Fetcher(object):
     def write_err(self, s):
         sys.stderr.write(s)
         sys.stderr.flush()
-        open('log', 'a').write("%s\n" % s)  # XXX log
+        #open('log', 'a').write("%s\n" % s)  # XXX log
 
     def write_abort(self):
         self.write_err("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
+
+    def log_url(error):
+        line = "%s  %s\n" % (error.ljust(10), url)
+        open("error_urls", "a").write(line)
 
     def truncate_url(self, width, s):
         radius = (len(s) - width + 3) / 2
@@ -149,6 +153,9 @@ class Fetcher(object):
         if error or complete: 
             term = "\n"
         self.write_err("%s%s%s%s" % (line, url, size, term))
+
+        if error:
+            self.log_url(error)
 
     def typecheck_html(self, filename):
         if not self.is_typechecked:
