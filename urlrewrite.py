@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import re
 import urlparse
 
@@ -26,6 +27,10 @@ def assemble_netloc(username, password, hostname, port):
     if port:
         netloc = "%s:%s" % (netloc, port)
     return netloc
+
+def get_hostname(url):
+    pack = urlparse.urlsplit(url)
+    return pack.hostname
 
 def rewrite_urls(origin_url, urls):
     origin_pack = urlparse.urlsplit(origin_url)
@@ -56,7 +61,13 @@ def rewrite_urls(origin_url, urls):
         if new_u:
             yield new_u
 
-        # XXX error handling
+        # drop null urls on the floor, eg: #chapter2
+
+def url_to_filename(url):
+    (scheme, netloc, path, query, _) = urlparse.urlsplit(url)
+    (path, ext) = os.path.splitext(path)
+    filename = "_".join([x for x in (scheme, netloc, path, query) if x])
+    return re.sub("[^a-zA-Z0-9]", "_", filename) + ext
 
 def unique(it):
     seen = set()

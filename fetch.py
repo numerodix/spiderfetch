@@ -69,7 +69,7 @@ class Fetcher(object):
         self.download_size = None
         self.totalsize = None
 
-        self.typechecked = None
+        self.is_typechecked = None
 
         self.linewidth = 78
         self.actionwidth = 6
@@ -151,19 +151,25 @@ class Fetcher(object):
         self.write_err("%s%s%s%s" % (line, url, size, term))
 
     def typecheck_html(self, filename):
-        if not self.typechecked:
+        if not self.is_typechecked:
             data = open(self.filename, 'r').read()
             if data:
                 if filetype.is_html(data):
-                    self.typechecked = True
+                    self.is_typechecked = True
 
     def typecheck_urls(self, filename):
-        if not self.typechecked:
+        if not self.is_typechecked:
             data = open(self.filename, 'r').read()
             if data:
                 if not filetype.has_urls(data):
-                    raise filetype.WrongFileTypeError
-                self.typechecked = True
+                    self.throw_type_error()
+                self.is_typechecked = True
+
+    def throw_type_error(self):
+        if self.fetch_if_wrongtype:
+            self.action = "fetch"
+        else:
+            raise filetype.WrongFileTypeError
 
     def fetch_hook(self, blocknum, blocksize, totalsize):
         self.download_size = blocknum * blocksize
@@ -179,7 +185,7 @@ class Fetcher(object):
                 self.totalsize = totalsize
             self.write_progress(rate=rate)
 
-        if not self.typechecked:
+        if not self.is_typechecked:
             if self.download_size >= filetype.HEADER_SIZE_HTML:
                 self.typecheck_html(self.filename)
             if self.download_size >= filetype.HEADER_SIZE_URLS:
@@ -207,9 +213,9 @@ class Fetcher(object):
                and not headers.fp.read(1):
                 raise ZeroDataError
 
-            if not self.typechecked:
+            if not self.is_typechecked:
                 self.typecheck_html(self.filename)
-            if not self.typechecked:
+            if not self.is_typechecked:
                 self.typecheck_urls(self.filename)
 
             self.write_progress(complete=True)
@@ -248,19 +254,28 @@ class Fetcher(object):
             self.write_abort()
             raise
 
-    def fetch(self, url, filename):
-        self.action = "fetch"
-        self.typechecked = True
-        self.load(url, filename)
-
     def spider(self, url, filename):
         self.action = "spider"
-        self.typechecked = False
+        self.is_typechecked = False
+        self.fetch_if_wrongtype = False
+        self.load(url, filename)
+
+    def spider_fetch(self, url, filename):
+        self.action = "spider"
+        self.is_typechecked = False
+        self.fetch_if_wrongtype = True
+        self.load(url, filename)
+
+    def fetch(self, url, filename):
+        self.action = "fetch"
+        self.is_typechecked = True
+        self.fetch_if_wrongtype = False
         self.load(url, filename)
 
 _fetcher = Fetcher()
-fetch = _fetcher.fetch
 spider = _fetcher.spider
+spider_fetch = _fetcher.spider_fetch
+fetch = _fetcher.fetch
 
 
 if __name__ == "__main__":

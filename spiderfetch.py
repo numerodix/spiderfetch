@@ -8,6 +8,7 @@ import traceback
 
 import fetch
 import filetype
+import io
 import recipe
 import spider
 import urlrewrite
@@ -18,7 +19,7 @@ url = sys.argv[1]
 web = web.Web()
 web.add_url(url, [])
 
-def write_out(self, s):
+def write_out(s):
     sys.stdout.write(s)
 
 def get_url_w_redirects(getter, url, filename):
@@ -35,19 +36,46 @@ def get_url_w_redirects(getter, url, filename):
             url = e.new_url
     return url
 
-def process_url(url, rule, queue, web):
+def process_record(record, rule, queue, web):
+    url = record.get("url")
     try:
-        (fp, filename) = tempfile.mkstemp(prefix=sys.argv[0] + ".")
-        url = get_url_w_redirects(fetch.spider, url, filename)
-        data = open(filename, 'r').read()
+        getter = None
+        if record.get("fetch") and record.get("spider"):
+            getter = fetch.spider_fetch
+        elif record.get("fetch"):
+            getter = fetch.fetch
+        elif record.get("spider"):
+            getter = fetch.spider
 
-        urls = spider.unbox_it_to_ss(spider.findall(data))
-        urls = urlrewrite.rewrite_urls(url, urls)
+        if getter:
+            (fp, filename) = io.get_tempfile()
+            url = get_url_w_redirects(getter, url, filename)
 
-        for u in urls:
-            if u not in web:
-                queue.append(u)
-                web.add_url(url, [u])
+            if record.get("fetch"):
+                os.rename(filename, urlrewrite.url_to_filename(url))
+
+            if record.get("spider") and os.path.exists(filename):
+                data = open(filename, 'r').read()
+                urls = spider.unbox_it_to_ss(spider.findall(data))
+                urls = urlrewrite.rewrite_urls(url, urls)
+
+                for u in urls:
+                    if u not in web:
+                        r = {"url" : u, "spider": False, "fetch": False}
+
+                        if recipe.apply_mask(rule.get("dump"), u):
+                            write_out("%s\n" % u)
+                            web.add_url(url, [u])
+                        if recipe.apply_mask(rule.get("fetch"), u):
+                            r["fetch"] = True
+                            web.add_url(url, [u])
+                        if (recipe.apply_mask(rule.get("spider"), u) and
+                            recipe.apply_mask(rule.get("host_filter"), u)):
+                            r["spider"] = True
+                            web.add_url(url, [u])
+
+                        if r["spider"] or r["fetch"]:
+                            queue.append(r)
 
     except fetch.DuplicateUrlWarning:
         pass
@@ -62,25 +90,30 @@ def process_url(url, rule, queue, web):
         s += "\n"
         open("error_log", "a").write(s)
     finally:
-        if filename and os.path.exists(filename):
-            os.unlink(filename)
         try:
-            os.close(fp)
-        except:
+            if filename and os.path.exists(filename):
+                os.unlink(filename)
+            if fp: os.close(fp)
+        except (NameError, OSError):
             pass
 
 
-#recipe = recipe.load_recipe("rm.py")
-recipe = recipe.get_default_recipe()
+#rules = recipe.load_recipe("jpg.py")
+rules = recipe.get_default_recipe(url)
 
-queue = web.urls()
-for rule in recipe:
+queue = [{"spider": True, "url": web.root.url}]
+for rule in rules:
     depth = rule.get("depth", 1)
-    while queue and (depth > 0 or depth < 0):
-        if depth > 0: depth -= 1
-
+    while queue:
+        if depth > 0: 
+            depth -= 1
+        elif depth == 0:
+        # There may still be records in the queue, but since depth is reached
+        # no more spidering is allowed, so we remove the tags
+            map(lambda r: r.pop("spider"), queue)
+        
         working_set = queue
         queue = []
         
-        for url in working_set: 
-            process_url(url, rule, queue, web)
+        for record in working_set: 
+            process_record(record, rule, queue, web)
