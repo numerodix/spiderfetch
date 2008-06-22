@@ -8,6 +8,7 @@ import socket
 import sys
 import time
 import urllib
+import urlparse
 
 import filetype
 import shcolor
@@ -30,6 +31,7 @@ socket.setdefaulttimeout(10)
 
 class ErrorAlreadyProcessed(Exception): pass
 class ZeroDataError(Exception): pass
+class DuplicateUrlWarning(Exception): pass
 class ChangedUrlWarning(Exception):
     def __init__(self, new_url):
         self.new_url = new_url
@@ -54,6 +56,8 @@ class MyURLopener(urllib.FancyURLopener):
             newurl = headers['location']
         elif 'uri' in headers:
             newurl = headers['uri']
+        #newurl = urlparse.urljoin(url, newurl)
+        newurl = urlparse.urljoin(self.fetcher.url, newurl)
         raise ChangedUrlWarning(newurl)
 
 class Fetcher(object):
@@ -75,13 +79,13 @@ class Fetcher(object):
 
         urllib._urlopener = MyURLopener(self)
 
-    def write(self, s):
+    def write_err(self, s):
         sys.stderr.write(s)
         sys.stderr.flush()
         open('log', 'a').write("%s\n" % s)  # XXX log
 
     def write_abort(self):
-        self.write("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
+        self.write_err("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
 
     def truncate_url(self, width, s):
         radius = (len(s) - width + 3) / 2
@@ -144,7 +148,7 @@ class Fetcher(object):
         term = "\r"
         if error or complete: 
             term = "\n"
-        self.write("%s%s%s%s" % (line, url, size, term))
+        self.write_err("%s%s%s%s" % (line, url, size, term))
 
     def typecheck_html(self, filename):
         if not self.typechecked:
@@ -238,6 +242,8 @@ class Fetcher(object):
                         return
             self.write_progress(error="url error")
             raise
+        except socket.timeout:
+            self.write_progress(error="timeout")
         except KeyboardInterrupt:
             self.write_abort()
             raise
@@ -259,23 +265,19 @@ spider = _fetcher.spider
 
 if __name__ == "__main__":
     try:
+        _fetcher._urlopener = urllib.FancyURLopener()
         filename = "/dev/null"
         if sys.argv[1] == "-s":
             import tempfile
-            (_, filename) = tempfile.mkstemp(prefix=sys.argv[0] + ".")
-            try:
-                spider(sys.argv[2], filename)
-            except ChangedUrlWarning, e:
-                spider(e.new_url, filename)
+            (fp, filename) = tempfile.mkstemp(prefix=sys.argv[0] + ".")
+            spider(sys.argv[2], filename)
+            os.close(fp); os.unlink(filename)
         else:
-            try:
-                if len(sys.argv) > 2:
-                    filename = sys.argv[2]
-                fetch(sys.argv[1], filename)
-            except ChangedUrlWarning, e:
-                fetch(e.new_url, filename)
+            if len(sys.argv) > 2:
+                filename = sys.argv[2]
+            fetch(sys.argv[1], filename)
     except filetype.WrongFileTypeError:
-        pass
+        os.unlink(filename)
     except KeyboardInterrupt:
         sys.exit()
     except IndexError:
