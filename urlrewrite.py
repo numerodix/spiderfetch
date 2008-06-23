@@ -58,6 +58,9 @@ def rewrite_urls(origin_url, urls):
             path_query = urlparse.urlunsplit((None, None, path, query, None))
             new_u = urlparse.urljoin(origin_url, path_query)
 
+        # quote spaces
+        new_u = new_u.replace(" ", "%20")
+
         if new_u:
             yield new_u
 

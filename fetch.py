@@ -72,21 +72,25 @@ class Fetcher(object):
         self.totalsize = None
 
         self.is_typechecked = None
+        self.fetch_if_wrongtype = False
 
         self.linewidth = 78
         self.actionwidth = 6
         self.ratewidth = 10
         self.sizewidth = 10
-        self.units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB"}
+        self.units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB", 6: "EB"}
 
         urllib._urlopener = MyURLopener(self)
 
-    def log_url(self, error):
-        error = error.replace(" ", "_")
+    def log_url(self, status, error=False):
+        status = status.replace(" ", "_")
         actual = self.format_size(self.download_size).rjust(8)
         given = self.format_size(self.totalsize).rjust(8)
-        line = "%s  %s  %s  %s\n" % (error.ljust(10), actual, given, self.url)
-        open("error_urls", "a").write(line)
+        line = "%s  %s  %s  %s\n" % (status.ljust(10), actual, given, self.url)
+        if error:
+            open("error_urls", "a").write(line)
+        else:
+            open("log_urls", "a").write(line)
 
     def truncate_url(self, width, s):
         radius = (len(s) - width + 3) / 2
@@ -95,12 +99,15 @@ class Fetcher(object):
             s = s[0:mid-radius] + ".." + s[mid+radius:]
         return s
 
-    def format_size(self, rate):
+    def format_size(self, size):
+        if not size:
+            size = -1
+
         c = 0
-        while rate > 1000:
-            rate = rate / 1024.
+        while size > 1000:
+            size = size / 1024.
             c += 1
-        r = "%3.1f" % rate
+        r = "%3.1f" % size
         u = "%s" % self.units[c]
         return r.rjust(5) + " " + u.ljust(2)
 
@@ -151,8 +158,11 @@ class Fetcher(object):
             term = "\n"
         io.write_err("%s%s%s%s" % (line, url, size, term))
 
+        # log download
         if error:
-            self.log_url(error)
+            self.log_url(error, error=True)
+        elif complete:
+            self.log_url("done")
 
     def typecheck_html(self, filename):
         if not self.is_typechecked:
