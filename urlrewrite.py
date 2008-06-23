@@ -78,10 +78,6 @@ def url_to_filename(url):
 def hostname_to_filename(url):
     return re.sub("[^a-zA-Z0-9]", "_", url)
 
-def unique(it):
-    seen = set()
-    return [x for x in it if x not in seen and not seen.add(x)]
-
 
 
 if __name__ == "__main__":

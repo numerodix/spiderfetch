@@ -111,12 +111,13 @@ class Web(object):
 
 
 if __name__ == "__main__":
-    parser = optparse.OptionParser() ; a = parser.add_option
+    parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
     a("--all", action="store_true", help="List all urls in web")
-    a("--in", dest="into", help="Find incoming urls to $url")
-    a("--out", help="Find outgoing urls from $url")
-    a("--trace", help="Trace path from root to $url")
+    a("--in", metavar="<url>", dest="into", help="Find incoming urls to <url>")
+    a("--out", metavar="<url>", help="Find outgoing urls from <url>")
+    a("--trace", metavar="<url>", help="Trace path from root to <url>")
     a("--longest", action="store_true", help="Show trace of longest path")
+    a("-h", action="callback", callback=io.opts_help, help="Display this message")
     (opts, args) = parser.parse_args()
     try:
         web = io.deserialize(args[0])

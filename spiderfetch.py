@@ -68,20 +68,25 @@ def process_record(record, rule, queue, web):
                 urls = urlrewrite.rewrite_urls(url, urls)
 
                 for u in urls:
+                    matched = False
                     if u not in web:
                         r = {"url" : u, "spider": False, "fetch": False}
 
                         if recipe.apply_mask(rule.get("dump"), u):
                             io.write_out("%s\n" % u)
+                            matched = True
                         if recipe.apply_mask(rule.get("fetch"), u):
                             r["fetch"] = True
+                            matched = True
                         if (recipe.apply_mask(rule.get("spider"), u) and
                             recipe.apply_hostfilter(host_filter, u)):
                             r["spider"] = True
+                            matched = True
 
                         if r["spider"] or r["fetch"]:
                             queue.append(r)
-                    web.add_url(url, [u])
+                    if matched:
+                        web.add_url(url, [u])
 
     except fetch.DuplicateUrlWarning:
         pass

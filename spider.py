@@ -4,7 +4,6 @@ import itertools
 import re
 
 import shcolor
-import urlrewrite
 
 
 SPIDER_SCHEMES = ["ftp", "http", "https"]
@@ -32,6 +31,9 @@ LINK = re.compile(_link)
 _frame = """(?ims)<\s*i?frame[^>]+src[ ]*=?[ ]*(?P<quot>["'`])(?P<url>.*?)(?P=quot)[^>]*?>"""
 FRAME = re.compile(_frame)
 
+_img = """(?ims)<\s*img[^>]+src[ ]*=?[ ]*(?P<quot>["'`])(?P<url>.*?)(?P=quot)[^>]*?>"""
+IMG = re.compile(_img)
+
 _uri_match = """(?ims)(?P<url>[a-z][a-z0-9+.-]{1,120}:\/\/(([a-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[a-f0-9]{2}){1,333}([a-z0-9][a-z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000})?)"""
 URI_MATCH = re.compile(_uri_match)
 
@@ -39,7 +41,7 @@ def find_with_r(r, s):
     return re.finditer(r, s)
 
 def spider(s):
-    for it in [find_with_r(r, s) for r in (LINK, FRAME)]:
+    for it in [find_with_r(r, s) for r in (LINK, FRAME, IMG)]:
         for match in it:
             yield match
 
@@ -61,6 +63,10 @@ def group_by_regex(s):
     for (idx, it) in enumerate(its):
         for match in it: 
             yield (idx, match)
+
+def unique(it):
+    seen = set()
+    return [x for x in it if x not in seen and not seen.add(x)]
 
 def colorize_shell(str):
     it = group_by_regex(str)
@@ -127,7 +133,7 @@ if __name__ == "__main__":
             data = url_obj.read()
 
         if dump:
-            for url in urlrewrite.unique(unbox_it_to_ss(findall(data))):
+            for url in unique(unbox_it_to_ss(findall(data))):
                 print url
         else:
             print colorize_shell(data)
