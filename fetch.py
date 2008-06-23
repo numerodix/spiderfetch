@@ -11,7 +11,9 @@ import urllib
 import urlparse
 
 import filetype
+import io
 import shcolor
+import urlrewrite
 
 
 """ testurls
@@ -288,16 +290,18 @@ fetch = _fetcher.fetch
 
 if __name__ == "__main__":
     try:
-        _fetcher._urlopener = urllib.FancyURLopener()
+        urllib._urlopener = urllib.FancyURLopener()
         filename = "/dev/null"
         if sys.argv[1] == "-s":
             import tempfile
-            (fp, filename) = tempfile.mkstemp(prefix=sys.argv[0] + ".")
+            (fp, filename) = io.get_tempfile()
             spider(sys.argv[2], filename)
             os.close(fp); os.unlink(filename)
         else:
             if len(sys.argv) > 2:
                 filename = sys.argv[2]
+            else:
+                filename = urlrewrite.url_to_filename(sys.argv[1])
             fetch(sys.argv[1], filename)
     except filetype.WrongFileTypeError:
         os.unlink(filename)

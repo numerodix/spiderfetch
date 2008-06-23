@@ -123,3 +123,5 @@ for rule in rules:
         
         for record in working_set: 
             process_record(record, rule, queue, web)
+
+save_web(web)
