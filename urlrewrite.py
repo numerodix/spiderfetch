@@ -67,7 +67,10 @@ def url_to_filename(url):
     (scheme, netloc, path, query, _) = urlparse.urlsplit(url)
     (path, ext) = os.path.splitext(path)
     filename = "_".join([x for x in (scheme, netloc, path, query) if x])
-    return re.sub("[^a-zA-Z0-9]", "_", filename) + ext
+    filename = re.sub("[^a-zA-Z0-9]", "_", filename)
+    filename = re.sub("_{2,}", "_", filename)
+    filename = re.sub("_$", "", filename)
+    return filename + ext
 
 def hostname_to_filename(url):
     return re.sub("[^a-zA-Z0-9]", "_", url)

@@ -81,14 +81,6 @@ class Fetcher(object):
 
         urllib._urlopener = MyURLopener(self)
 
-    def write_err(self, s):
-        sys.stderr.write(s)
-        sys.stderr.flush()
-        #open('log', 'a').write("%s\n" % s)  # XXX log
-
-    def write_abort(self):
-        self.write_err("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
-
     def log_url(self, error):
         error = error.replace(" ", "_")
         line = "%s  %s\n" % (error.ljust(10), self.url)
@@ -155,7 +147,7 @@ class Fetcher(object):
         term = "\r"
         if error or complete: 
             term = "\n"
-        self.write_err("%s%s%s%s" % (line, url, size, term))
+        io.write_err("%s%s%s%s" % (line, url, size, term))
 
         if error:
             self.log_url(error)
@@ -261,7 +253,7 @@ class Fetcher(object):
         except socket.timeout:
             self.write_progress(error="timeout")
         except KeyboardInterrupt:
-            self.write_abort()
+            io.write_abort()
             raise
 
     def spider(self, url, filename):

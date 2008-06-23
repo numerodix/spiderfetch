@@ -1,13 +1,31 @@
 #!/usr/bin/env python
 
+import gzip
 import pickle
 import os
 import tempfile
 import sys
 
+import shcolor
+
+
+def write_out(s):
+    sys.stdout.write(s)
+
+def write_err(s):
+    sys.stderr.write(s)
+    sys.stderr.flush()
+
+def write_abort():
+    write_err("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
 
 def get_tempfile():
 	return tempfile.mkstemp(prefix=os.path.basename(sys.argv[0]) + ".")
 
 def serialize(o, filename):
-    pickle.dump(o, open(filename, 'w'), protocol=pickle.HIGHEST_PROTOCOL)
+    fp = gzip.GzipFile(filename, 'w')
+    pickle.dump(o, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+def deserialize(filename):
+    fp = gzip.GzipFile(filename, 'r')
+    return pickle.load(fp)

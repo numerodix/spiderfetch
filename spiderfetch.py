@@ -10,6 +10,7 @@ import fetch
 import filetype
 import io
 import recipe
+import shcolor
 import spider
 import urlrewrite
 import web
@@ -19,13 +20,12 @@ url = sys.argv[1]
 web = web.Web()
 web.add_url(url, [])
 
-def write_out(s):
-    sys.stdout.write(s)
-
 def save_web(web):
     hostname = urlrewrite.get_hostname(web.root.url)
     filename = urlrewrite.hostname_to_filename(hostname) + ".web"
+    io.write_err("Saving web to %s ..." % shcolor.color(shcolor.YELLOW, filename))
     io.serialize(web, filename)
+    io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
 
 def get_url_w_redirects(getter, url, filename):
     """http 30x redirects produce a recursion with new urls that may or may not
@@ -69,7 +69,7 @@ def process_record(record, rule, queue, web):
                         r = {"url" : u, "spider": False, "fetch": False}
 
                         if recipe.apply_mask(rule.get("dump"), u):
-                            write_out("%s\n" % u)
+                            io.write_out("%s\n" % u)
                             web.add_url(url, [u])
                         if recipe.apply_mask(rule.get("fetch"), u):
                             r["fetch"] = True
