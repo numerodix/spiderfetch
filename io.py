@@ -29,3 +29,15 @@ def serialize(o, filename):
 def deserialize(filename):
     fp = gzip.GzipFile(filename, 'r')
     return pickle.load(fp)
+
+
+
+if __name__ == "__main__":
+    try:
+        s = "dvorak"
+        (fp, filename) = get_tempfile()
+        serialize(s, filename)
+        print s == deserialize(filename)
+    finally:
+        os.close(fp)
+        os.unlink(filename)

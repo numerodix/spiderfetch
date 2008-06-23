@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
+import optparse
 import pickle
+import sys
+
+import io
 
 
 class Node(object):
@@ -46,16 +50,45 @@ class Web(object):
         return self.index.get(url)
 
 
+    def dump(self):
+        for u in self.index:
+            io.write_err("%s\n" % u)
+        
+    def find_refs(self, url, out=True):
+        node = self.index.get(url)
+        l = node.outgoing
+        if not out: l = node.incoming
+        for u in l:
+            io.write_err("%s\n" % u)
+
+    def trace(self, url):
+        node = self.index.get(url)
+        if node:
+            queue = node.incoming.keys()
+
+
+    def print_stats(self):
+        s  = "Root url : %s\n" % self.root.url
+        s += "Web size : %s urls\n" % len(self.index)
+        io.write_err(s)
+
 
 if __name__ == "__main__":
-    g = Web()
-    g.add_url("no", ["ntnu", "aftenposten"])
-    g.add_url("ntnu", ["itea", "ark"])
-    print "root:  %s" % g.root.url
-    print "no's outgoing:  %s" % [s for s in g.root.outgoing.keys()]
-    print "ntnu's incoming:  %s" % [s for s in g.index["ntnu"].incoming.keys()]
-    print "ntnu's outgoing:  %s" % [s for s in g.index["ntnu"].outgoing.keys()]
-    print "itea's incoming:  %s" % [s for s in g.index["itea"].incoming.keys()]
-    print "all nodes:  %s" % [s for s in g.index.keys()]
-    print "no" in g
-    print "no2" in g
+    parser = optparse.OptionParser() ; a = parser.add_option
+    a("--all", action="store_true", help="List all urls in web")
+    a("--in", dest="into", help="Find incoming urls to $url")
+    a("--out", help="Find outgoing urls from $url")
+    a("--trace", help="Trace path from root to $url")
+    (opts, args) = parser.parse_args()
+    try:
+        web = io.deserialize(args[0])
+        if opts.all:
+            web.dump()
+        elif opts.into or opts.out:
+            web.find_refs((opts.into or opts.out), opts.out)
+        elif opts.trace:
+            web.trace(opts.trace)
+        else:
+            web.print_stats()
+    except IndexError:
+        parser.print_help()

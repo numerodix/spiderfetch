@@ -20,7 +20,7 @@ def is_html(data):
 def has_urls(data):
     if data: 
         try:
-            spider.harvest(data).next()
+            spider.findall(data).next()
             return True
         except StopIteration:
             pass

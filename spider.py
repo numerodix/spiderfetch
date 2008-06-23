@@ -4,6 +4,7 @@ import itertools
 import re
 
 import shcolor
+import urlrewrite
 
 
 SPIDER_SCHEMES = ["ftp", "http", "https"]
@@ -117,18 +118,18 @@ if __name__ == "__main__":
     import urllib
     try:
         dump = False
-        if sys.argv[1] == "-test":
+        if sys.argv[1] == "--test":
             data = testcases
         else:
-            if len(sys.argv) > 2 and sys.argv[2] == "-dump":
+            if len(sys.argv) > 2 and sys.argv[2] == "--dump":
                 dump = True
             url_obj = urllib.urlopen(sys.argv[1])
             data = url_obj.read()
 
         if dump:
-            for url in unbox_it_to_ss(findall(data)):
+            for url in urlrewrite.unique(unbox_it_to_ss(findall(data))):
                 print url
         else:
             print colorize_shell(data)
     except IndexError:
-        print "Usage:  %s [ <url> [-dump] | -test ] " % sys.argv[0]
+        print "Usage:  %s [ <url> [--dump] | --test ] " % sys.argv[0]

@@ -73,17 +73,15 @@ def process_record(record, rule, queue, web):
 
                         if recipe.apply_mask(rule.get("dump"), u):
                             io.write_out("%s\n" % u)
-                            web.add_url(url, [u])
                         if recipe.apply_mask(rule.get("fetch"), u):
                             r["fetch"] = True
-                            web.add_url(url, [u])
                         if (recipe.apply_mask(rule.get("spider"), u) and
                             recipe.apply_hostfilter(host_filter, u)):
                             r["spider"] = True
-                            web.add_url(url, [u])
 
                         if r["spider"] or r["fetch"]:
                             queue.append(r)
+                    web.add_url(url, [u])
 
     except fetch.DuplicateUrlWarning:
         pass
