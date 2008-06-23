@@ -83,7 +83,9 @@ class Fetcher(object):
 
     def log_url(self, error):
         error = error.replace(" ", "_")
-        line = "%s  %s\n" % (error.ljust(10), self.url)
+        actual = self.format_size(self.download_size).rjust(8)
+        given = self.format_size(self.totalsize).rjust(8)
+        line = "%s  %s  %s  %s\n" % (error.ljust(10), actual, given, self.url)
         open("error_urls", "a").write(line)
 
     def truncate_url(self, width, s):
@@ -210,6 +212,8 @@ class Fetcher(object):
         try:
             (_, headers) = urllib.urlretrieve(url, filename=self.filename, 
                 reporthook=self.fetch_hook)
+            
+            self.download_size = os.path.getsize(self.filename)
 
             if isinstance(headers, mimetools.Message) and headers.fp \
                and not headers.fp.read(1):

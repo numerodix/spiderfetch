@@ -20,7 +20,7 @@ def load_recipe(filename):
 
 def get_default_recipe(host_filter_url):
     #recipe = [{"spider": ".*", "dump": ".*\.jpg", "depth": -1}]
-    recipe = [{ "spider": ".*", "dump": "(?i).*\.jpe?g$", "depth": 1 }]
+    recipe = [{ "spider": ".*", "dump": "(?i).*\.jpe?g$", "depth": -1 }]
     return fill_in_recipe(recipe, host_filter_url)
 
 def apply_mask(mask, url):
