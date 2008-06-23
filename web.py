@@ -5,6 +5,7 @@ import pickle
 import sys
 
 import io
+import shcolor
 
 
 class Node(object):
@@ -53,19 +54,55 @@ class Web(object):
     def dump(self):
         for u in self.index:
             io.write_err("%s\n" % u)
+
+    def assert_in_web(self, url):
+        if url not in self.index:
+            io.write_err("Url %s not in the web\n" %
+                         shcolor.color(shcolor.YELLOW, url))
+            sys.exit(1)
         
     def find_refs(self, url, out=True):
+        self.assert_in_web(url)
         node = self.index.get(url)
         l = node.outgoing
         if not out: l = node.incoming
         for u in l:
             io.write_err("%s\n" % u)
 
-    def trace(self, url):
-        node = self.index.get(url)
-        if node:
-            queue = node.incoming.keys()
+    def get_trace(self, url):
+        self.assert_in_web(url)
+        def find_path_to_root(paths):
+            while paths:
+                paths_next = []
+                for path in paths:
+                    if path[0] == self.root.url:
+                        return path
+                    for url in self.index.get(path[-1]).incoming:
+                        newpath = path[:]   # careful, this is a copy, not ref!
+                        newpath.append(url)
+                        if url == self.root.url:
+                            return newpath
+                        paths_next.append(newpath)
+                paths = paths_next
+        hops = find_path_to_root([[url]])
+        hops.reverse()
+        return hops
 
+    def longest_path(self):
+        paths = []
+        for url in self.index:
+            paths.append(self.get_trace(url))
+        longest = paths[0]
+        for path in paths:
+            if len(path) > len(longest):
+                longest = path
+        return longest
+
+    def print_trace(self, path):
+        if path:
+            io.write_err("Showing trace from root:\n")
+            for (i, hop) in enumerate(path):
+                io.write_err(" %s  %s\n" % (str(i).rjust(1+(len(path)/10)), hop))
 
     def print_stats(self):
         s  = "Root url : %s\n" % self.root.url
@@ -79,6 +116,7 @@ if __name__ == "__main__":
     a("--in", dest="into", help="Find incoming urls to $url")
     a("--out", help="Find outgoing urls from $url")
     a("--trace", help="Trace path from root to $url")
+    a("--longest", action="store_true", help="Show trace of longest path")
     (opts, args) = parser.parse_args()
     try:
         web = io.deserialize(args[0])
@@ -87,7 +125,9 @@ if __name__ == "__main__":
         elif opts.into or opts.out:
             web.find_refs((opts.into or opts.out), opts.out)
         elif opts.trace:
-            web.trace(opts.trace)
+            web.print_trace(web.get_trace(opts.trace))
+        elif opts.longest:
+            web.print_trace(web.longest_path())
         else:
             web.print_stats()
     except IndexError:
