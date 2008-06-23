@@ -34,6 +34,7 @@ socket.setdefaulttimeout(10)
 class ErrorAlreadyProcessed(Exception): pass
 class ZeroDataError(Exception): pass
 class DuplicateUrlWarning(Exception): pass
+class UrlRedirectsOffHost(Exception): pass
 class ChangedUrlWarning(Exception):
     def __init__(self, new_url):
         self.new_url = new_url

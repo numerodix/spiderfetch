@@ -27,7 +27,7 @@ def save_web(web):
     io.serialize(web, filename)
     io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
 
-def get_url_w_redirects(getter, url, filename):
+def get_url_w_redirects(getter, url, filename, host_filter=False):
     """http 30x redirects produce a recursion with new urls that may or may not
     have been seen before"""
     while True:
@@ -37,12 +37,15 @@ def get_url_w_redirects(getter, url, filename):
         except fetch.ChangedUrlWarning, e:
             if e.new_url in web:
                 raise fetch.DuplicateUrlWarning
+            if not recipe.apply_hostfilter(host_filter, e.new_url):
+                raise fetch.UrlRedirectsOffHost
             web.add_ref(url, e.new_url)
             url = e.new_url
     return url
 
 def process_record(record, rule, queue, web):
     url = record.get("url")
+    host_filter = rule.get("host_filter")
     try:
         getter = None
         if record.get("fetch") and record.get("spider"):
@@ -54,7 +57,7 @@ def process_record(record, rule, queue, web):
 
         if getter:
             (fp, filename) = io.get_tempfile()
-            url = get_url_w_redirects(getter, url, filename)
+            url = get_url_w_redirects(getter, url, filename, host_filter=host_filter)
 
             if record.get("fetch"):
                 os.rename(filename, urlrewrite.url_to_filename(url))
@@ -75,7 +78,7 @@ def process_record(record, rule, queue, web):
                             r["fetch"] = True
                             web.add_url(url, [u])
                         if (recipe.apply_mask(rule.get("spider"), u) and
-                            recipe.apply_mask(rule.get("host_filter"), u)):
+                            recipe.apply_hostfilter(host_filter, u)):
                             r["spider"] = True
                             web.add_url(url, [u])
 
@@ -83,6 +86,8 @@ def process_record(record, rule, queue, web):
                             queue.append(r)
 
     except fetch.DuplicateUrlWarning:
+        pass
+    except fetch.UrlRedirectsOffHost:
         pass
     except KeyboardInterrupt:
         save_web(web)
