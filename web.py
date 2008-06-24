@@ -104,6 +104,19 @@ class Web(object):
             for (i, hop) in enumerate(path):
                 io.write_err(" %s  %s\n" % (str(i).rjust(1+(len(path)/10)), hop))
 
+    def print_popular(self):
+        popular = self.root
+        for (u, n) in self.index.items():
+            if len(n.incoming) > len(popular.incoming):
+                popular = n
+        s = "Most popular url: %s\n" % popular.url
+        s += "References      : %s urls\n" % len(popular.incoming)
+        io.write_err(s)
+        s = ""
+        for u in popular.incoming:
+            s += "%s\n" % u
+        io.write_out(s)
+
     def print_stats(self):
         s  = "Root url : %s\n" % self.root.url
         s += "Web size : %s urls\n" % len(self.index)
@@ -119,6 +132,7 @@ if __name__ == "__main__":
     a("--out", metavar="<url>", help="Find outgoing urls from <url>")
     a("--trace", metavar="<url>", help="Trace path from root to <url>")
     a("--longest", action="store_true", help="Show trace of longest path")
+    a("--popular", action="store_true", help="Find the most referenced url")
     a("-h", action="callback", callback=io.opts_help, help="Display this message")
     (opts, args) = parser.parse_args()
     try:
@@ -131,6 +145,8 @@ if __name__ == "__main__":
             web.print_trace(web.get_trace(opts.trace))
         elif opts.longest:
             web.print_trace(web.longest_path())
+        elif opts.popular:
+            web.print_popular()
         else:
             web.print_stats()
     except IndexError:

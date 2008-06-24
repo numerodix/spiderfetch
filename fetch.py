@@ -101,7 +101,7 @@ class Fetcher(object):
         return s
 
     def format_size(self, size):
-        if not size:
+        if size == None:
             size = -1
 
         c = 0
@@ -121,7 +121,7 @@ class Fetcher(object):
         elif complete:
             rate = "done"
         else:
-            rate = "%s/s" % self.format_size(rate)
+            rate = "%s/s" % self.format_size(rate or 0)
         rate = rate.ljust(self.ratewidth)
 
         if self.totalsize:
@@ -221,6 +221,8 @@ class Fetcher(object):
         """
 
         try:
+            self.write_progress()
+
             (_, headers) = urllib.urlretrieve(url, filename=self.filename, 
                 reporthook=self.fetch_hook)
             
