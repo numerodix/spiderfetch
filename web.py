@@ -71,23 +71,27 @@ class Web(object):
 
     def get_trace(self, url):
         self.assert_in_web(url)
-        def find_path_to_root(paths):
-            while paths:
-                paths_next = []
-                for path in paths:
-                    if path[0] == self.root.url:
-                        return path
-                    for url in self.index.get(path[-1]).incoming:
+        seen = {}
+        paths = [[url]]
+        seen[url] = True
+        while paths:
+            paths_next = []
+            for path in paths:
+                #print "AAAAAAAAAA", path
+                if path[0] == self.root.url:
+                    return path
+                for url in self.index.get(path[-1]).incoming:
+                    if url not in seen:     # loop detected, drop this path
+                        seen[url] = True
                         newpath = path[:]   # careful, this is a copy, not ref!
                         newpath.append(url)
                         if url == self.root.url:
+                            newpath.reverse()
                             return newpath
                         paths_next.append(newpath)
-                paths = paths_next
-        hops = find_path_to_root([[url]])
-        hops.reverse()
-        return hops
+            paths = paths_next
 
+    # is this supposed to be longest (in graph) or deepest (from root)?
     def longest_path(self):
         paths = []
         for url in self.index:
@@ -105,17 +109,10 @@ class Web(object):
                 io.write_err(" %s  %s\n" % (str(i).rjust(1+(len(path)/10)), hop))
 
     def print_popular(self):
-        popular = self.root
-        for (u, n) in self.index.items():
-            if len(n.incoming) > len(popular.incoming):
-                popular = n
-        s = "Most popular url: %s\n" % popular.url
-        s += "References      : %s urls\n" % len(popular.incoming)
-        io.write_err(s)
-        s = ""
-        for u in popular.incoming:
-            s += "%s\n" % u
-        io.write_out(s)
+        tuples = [(len(n.incoming), n) for n in self.index.values()]
+        tuples.sort(reverse=True)
+        for (i, node) in tuples[:10]:
+            io.write_err(" %s  %s\n" % (str(i).rjust(2), node.url))
 
     def print_stats(self):
         s  = "Root url : %s\n" % self.root.url
@@ -134,20 +131,37 @@ if __name__ == "__main__":
     a("--longest", action="store_true", help="Show trace of longest path")
     a("--popular", action="store_true", help="Find the most referenced url")
     a("-h", action="callback", callback=io.opts_help, help="Display this message")
+    a("--test", action="store_true", help="Run trace loop test")
     (opts, args) = parser.parse_args()
     try:
-        web = io.deserialize(args[0])
+        if opts.test:
+            wb = Web()
+            wb.root = Node("a")
+            wb.index["a"] = wb.root
+            wb.index["b"] = Node("b")
+            wb.index["c"] = Node("c")
+            #wb.index["b"].incoming["a"] = wb.root      # cut link from a to b
+            wb.index["b"].incoming["c"] = wb.index["c"] # create loop b <-> c
+            wb.index["c"].incoming["b"] = wb.index["b"]
+            print "Root :", wb.root.url
+            print "Index:", wb.index
+            print "b.in :", wb.index['b'].incoming
+            print "c.in :", wb.index['c'].incoming
+            wb.print_trace(wb.get_trace("c"))   # inf loop if loop not detected
+            sys.exit()
+
+        wb = io.deserialize(args[0])
         if opts.dump:
-            web.dump()
+            wb.dump()
         elif opts.into or opts.out:
-            web.find_refs((opts.into or opts.out), opts.out)
+            wb.find_refs((opts.into or opts.out), opts.out)
         elif opts.trace:
-            web.print_trace(web.get_trace(opts.trace))
+            wb.print_trace(wb.get_trace(opts.trace))
         elif opts.longest:
-            web.print_trace(web.longest_path())
+            wb.print_trace(wb.longest_path())
         elif opts.popular:
-            web.print_popular()
+            wb.print_popular()
         else:
-            web.print_stats()
+            wb.print_stats()
     except IndexError:
         parser.print_help()

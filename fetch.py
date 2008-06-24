@@ -112,16 +112,18 @@ class Fetcher(object):
         u = "%s" % self.units[c]
         return r.rjust(5) + " " + u.ljust(2)
 
-    def write_progress(self, rate=None, complete=False, error=None):
+    def write_progress(self, rate=None, prestart=None, complete=False, error=None):
         # compute string lengths
         action = self.action.rjust(self.actionwidth)
 
         if error:
             rate = error
+        elif prestart:
+            rate = "starting"
         elif complete:
             rate = "done"
         else:
-            rate = "%s/s" % self.format_size(rate or 0)
+            rate = "%s/s" % self.format_size(rate)
         rate = rate.ljust(self.ratewidth)
 
         if self.totalsize:
@@ -139,13 +141,15 @@ class Fetcher(object):
         # add formatting
         if error:
             rate = shcolor.color(shcolor.RED, rate)
+        elif prestart:
+            rate = shcolor.color(shcolor.CYAN, rate)
         elif complete:
             rate = shcolor.color(shcolor.GREEN, rate)
         else:
             rate = shcolor.color(shcolor.YELLOW, rate)
 
         # draw progress bar
-        if not (error or complete) and self.totalsize:
+        if not (error or prestart or complete) and self.totalsize:
             c = int(url_w * self.download_size / self.totalsize)
             url = shcolor.wrap_s(url, c, None, reverse=True)
 
@@ -221,7 +225,7 @@ class Fetcher(object):
         """
 
         try:
-            self.write_progress()
+            self.write_progress(prestart=True)
 
             (_, headers) = urllib.urlretrieve(url, filename=self.filename, 
                 reporthook=self.fetch_hook)
