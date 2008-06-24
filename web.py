@@ -142,7 +142,7 @@ class Web(object):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    parser.usage = "%prog <web> [options]"
+    parser.usage = "Usage:  %s <web> [options]\n" % sys.argv[0]
     a("--dump", action="store_true", help="Dump all urls in web")
     a("--in", metavar="<url>", dest="into", help="Find incoming urls to <url>")
     a("--out", metavar="<url>", help="Find outgoing urls from <url>")
@@ -185,4 +185,4 @@ if __name__ == "__main__":
         else:
             wb.print_stats()
     except IndexError:
-        parser.print_help()
+        io.opts_help(None, None, None, parser)

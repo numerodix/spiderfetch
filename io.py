@@ -40,14 +40,14 @@ def deserialize(filename):
     return o
 
 def opts_help(option, opt_str, value, parser):
-    write_err("Usage: %s [options]\n" % sys.argv[0])
+    write_err("%s\n" % parser.usage)
     for o in parser.option_list:
         var = o.metavar or ""
         short = (o._short_opts and o._short_opts[0]) or ""
         long  = (o._long_opts  and o._long_opts[0])  or ""
         argument = "%s %s %s" % (short, long, var)
         write_err("  %s %s\n" % (argument.strip().ljust(25), o.help))
-    sys.exit(0)
+    sys.exit(2)
 
 
 

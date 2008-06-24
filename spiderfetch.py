@@ -162,12 +162,11 @@ def main(url, queue=None, wb=None):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    parser.usage = "%prog <url> [options]"
+    parser.usage = "Usage:  %s <url> [<pattern>] [options]\n" % sys.argv[0]
     a("--fetch", action="store_true", help="Fetch urls, don't dump")
     a("--dump", action="store_true", help="Dump urls, don't fetch")
     a("--host", action="store_true", help="Only spider this host")
     a("-h", action="callback", callback=io.opts_help, help="Display this message")
-    parser.usage = "%prog <url> [options]"
     (opts, args) = parser.parse_args()
     try:
         if opts.fetch:
@@ -180,4 +179,4 @@ if __name__ == "__main__":
         (q, w) = restore_session(url)
         main(url, queue=q, wb=w)
     except IndexError:
-        parser.print_help()
+        io.opts_help(None, None, None, parser)
