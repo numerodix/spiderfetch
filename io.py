@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import gzip
-import pickle
+import cPickle as pickle    # cPickle is supposed to be faster
 import os
 import tempfile
 import sys
@@ -23,12 +23,21 @@ def get_tempfile():
 	return tempfile.mkstemp(prefix=os.path.basename("." + sys.argv[0]) + ".")
 
 def serialize(o, filename):
+    try:
+        getattr(o, "_to_pickle")()
+    except AttributeError:
+        pass
     fp = gzip.GzipFile(filename, 'w')
-    pickle.dump(o, fp, protocol=pickle.HIGHEST_PROTOCOL)
+    pickle.dump(o, fp)
 
 def deserialize(filename):
     fp = gzip.GzipFile(filename, 'r')
-    return pickle.load(fp)
+    o = pickle.load(fp)
+    try:
+        getattr(o, "_from_pickle")()
+    except AttributeError:
+        pass
+    return o
 
 def opts_help(option, opt_str, value, parser):
     write_err("Usage: %s [options]\n" % sys.argv[0])
@@ -39,6 +48,8 @@ def opts_help(option, opt_str, value, parser):
         argument = "%s %s %s" % (short, long, var)
         write_err("  %s %s\n" % (argument.strip().ljust(25), o.help))
     sys.exit(0)
+
+
 
 if __name__ == "__main__":
     try:

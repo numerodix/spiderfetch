@@ -50,6 +50,7 @@ class Web(object):
     def get(self, url):
         return self.index.get(url)
 
+    ### Introspective
 
     def dump(self):
         for u in self.index:
@@ -119,6 +120,25 @@ class Web(object):
         s += "Web size : %s urls\n" % len(self.index)
         io.write_err(s)
 
+    ### Pickling
+
+    def _to_pickle(self):
+        for node in self.index.values():
+            for n in node.incoming:
+                node.incoming[n] = None
+            for n in node.outgoing:
+                node.outgoing[n] = None
+        #for node in self.index.values():
+        #    print node.incoming
+        #    print node.outgoing
+
+    def _from_pickle(self):
+        for node in self.index.values():
+            for n in node.incoming:
+                node.incoming[n] = self.index[n]
+            for n in node.outgoing:
+                node.outgoing[n] = self.index[n]
+
 
 
 if __name__ == "__main__":
@@ -143,6 +163,8 @@ if __name__ == "__main__":
             #wb.index["b"].incoming["a"] = wb.root      # cut link from a to b
             wb.index["b"].incoming["c"] = wb.index["c"] # create loop b <-> c
             wb.index["c"].incoming["b"] = wb.index["b"]
+            io.serialize(wb, "web")
+            wb = io.deserialize("web")
             print "Root :", wb.root.url
             print "Index:", wb.index
             print "b.in :", wb.index['b'].incoming
