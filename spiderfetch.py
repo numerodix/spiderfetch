@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import optparse
 import os
 import pickle
 import sys
@@ -16,18 +17,14 @@ import urlrewrite
 import web
 
 
-url = sys.argv[1]
-web = web.Web()
-web.add_url(url, [])
-
-def save_web(web):
-    hostname = urlrewrite.get_hostname(web.root.url)
+def save_web(wb):
+    hostname = urlrewrite.get_hostname(wb.root.url)
     filename = urlrewrite.hostname_to_filename(hostname) + ".web"
     io.write_err("Saving web to %s ..." % shcolor.color(shcolor.YELLOW, filename))
-    io.serialize(web, filename)
+    io.serialize(wb, filename)
     io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
 
-def get_url_w_redirects(getter, url, filename, host_filter=False):
+def get_url(getter, url, wb, filename, host_filter=False):
     """http 30x redirects produce a recursion with new urls that may or may not
     have been seen before"""
     while True:
@@ -35,15 +32,15 @@ def get_url_w_redirects(getter, url, filename, host_filter=False):
             getter(url, filename)
             break
         except fetch.ChangedUrlWarning, e:
-            if e.new_url in web:
+            if e.new_url in wb:
                 raise fetch.DuplicateUrlWarning
             if not recipe.apply_hostfilter(host_filter, e.new_url):
                 raise fetch.UrlRedirectsOffHost
-            web.add_ref(url, e.new_url)
+            wb.add_ref(url, e.new_url)
             url = e.new_url
     return url
 
-def process_record(record, rule, queue, web):
+def process_record(record, rule, queue, wb):
     url = record.get("url")
     host_filter = rule.get("host_filter")
     try:
@@ -57,7 +54,7 @@ def process_record(record, rule, queue, web):
 
         if getter:
             (fp, filename) = io.get_tempfile()
-            url = get_url_w_redirects(getter, url, filename, host_filter=host_filter)
+            url = get_url(getter, url, wb, filename, host_filter=host_filter)
 
             if record.get("fetch"):
                 os.rename(filename, urlrewrite.url_to_filename(url))
@@ -69,7 +66,7 @@ def process_record(record, rule, queue, web):
 
                 for u in urls:
                     matched = False
-                    if u not in web:
+                    if u not in wb:
                         r = {"url" : u, "spider": False, "fetch": False}
 
                         if recipe.apply_mask(rule.get("dump"), u):
@@ -86,19 +83,19 @@ def process_record(record, rule, queue, web):
                         if r["spider"] or r["fetch"]:
                             queue.append(r)
                     if matched:
-                        web.add_url(url, [u])
+                        wb.add_url(url, [u])
 
     except fetch.DuplicateUrlWarning:
         pass
     except fetch.UrlRedirectsOffHost:
         pass
     except KeyboardInterrupt:
-        save_web(web)
+        save_web(wb)
         sys.exit(1)
     except Exception, e:
         s = traceback.format_exc()
         s += "\nbad url:   |%s|\n" % url
-        node = web.get(url)
+        node = wb.get(url)
         for u in node.incoming.keys():
             s += "ref    :   |%s|\n" % u
         s += "\n"
@@ -112,24 +109,42 @@ def process_record(record, rule, queue, web):
             pass
 
 
-#rules = recipe.load_recipe("jpg.py")
-rules = recipe.get_default_recipe(url)
+def main(url):
+    wb = web.Web()
+    wb.add_url(url, [])
 
-queue = [{"spider": True, "url": web.root.url}]
-for rule in rules:
-    depth = rule.get("depth", 1)
-    while queue:
-        if depth > 0: 
-            depth -= 1
-        elif depth == 0:
-        # There may still be records in the queue, but since depth is reached
-        # no more spidering is allowed, so we remove the tags
-            map(lambda r: r.pop("spider"), queue)
-        
-        working_set = queue
-        queue = []
-        
-        for record in working_set: 
-            process_record(record, rule, queue, web)
+    #rules = recipe.load_recipe("jpg.py")
+    rules = recipe.get_default_recipe(url)
 
-save_web(web)
+    queue = [{"spider": True, "url": wb.root.url}]
+    for rule in rules:
+        depth = rule.get("depth", 1)
+        while queue:
+            if depth > 0: 
+                depth -= 1
+            elif depth == 0:
+            # There may still be records in the queue, but since depth is reached
+            # no more spidering is allowed, so we remove the tags
+                map(lambda r: r.pop("spider"), queue)
+            
+            working_set = queue
+            queue = []
+            
+            for record in working_set: 
+                process_record(record, rule, queue, wb)
+
+    save_web(wb)
+
+
+if __name__ == "__main__":
+    parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
+    a("--host", action="store_true", help="Don't spider outside the root host")
+    a("-h", action="callback", callback=io.opts_help, help="Display this message")
+    parser.usage = "%prog <url> [options]"
+    (opts, args) = parser.parse_args()
+    try:
+        if opts.host:
+            os.environ["HOST_FILTER"] = str(True)
+        main(sys.argv[1])
+    except IndexError:
+        parser.print_help()

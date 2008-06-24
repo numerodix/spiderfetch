@@ -110,9 +110,11 @@ class Web(object):
         io.write_err(s)
 
 
+
 if __name__ == "__main__":
     parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    a("--all", action="store_true", help="List all urls in web")
+    parser.usage = "%prog <web> [options]"
+    a("--dump", action="store_true", help="Dump all urls in web")
     a("--in", metavar="<url>", dest="into", help="Find incoming urls to <url>")
     a("--out", metavar="<url>", help="Find outgoing urls from <url>")
     a("--trace", metavar="<url>", help="Trace path from root to <url>")
@@ -121,7 +123,7 @@ if __name__ == "__main__":
     (opts, args) = parser.parse_args()
     try:
         web = io.deserialize(args[0])
-        if opts.all:
+        if opts.dump:
             web.dump()
         elif opts.into or opts.out:
             web.find_refs((opts.into or opts.out), opts.out)

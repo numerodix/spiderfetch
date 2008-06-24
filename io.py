@@ -31,11 +31,11 @@ def deserialize(filename):
     return pickle.load(fp)
 
 def opts_help(option, opt_str, value, parser):
-    print "Usage: %s [options]" % sys.argv[0]
+    write_err("Usage: %s [options]\n" % sys.argv[0])
     for o in parser.option_list:
         var = o.metavar or ""
         short = (o._short_opts and o._short_opts[0]) or ""
-        long = (o._long_opts and o._long_opts[0]) or ""
+        long  = (o._long_opts  and o._long_opts[0])  or ""
         argument = "%s %s %s" % (short, long, var)
         write_err("  %s %s\n" % (argument.strip().ljust(25), o.help))
     sys.exit(0)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
         s = "dvorak"
         (fp, filename) = get_tempfile()
         serialize(s, filename)
-        print s == deserialize(filename)
+        print "Serialization sanity check:", s == deserialize(filename)
     finally:
         os.close(fp)
         os.unlink(filename)

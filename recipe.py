@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import re
+import os
 
 import urlrewrite
 
@@ -9,7 +10,8 @@ def fill_in_recipe(recipe, host_filter_url):
     for rule in recipe:
         if not "depth" in rule:
             rule["depth"] = 1
-        if host_filter_url:
+        rule["host_filter"] = ".*"
+        if os.environ.get("HOST_FILTER"):
             rule["host_filter"] = urlrewrite.get_hostname(host_filter_url)
     return recipe
 
@@ -28,4 +30,6 @@ def apply_mask(mask, url):
         return re.match(mask, url)
 
 def apply_hostfilter(filter_hostname, url):
-    return urlrewrite.get_hostname(url) == filter_hostname
+    if os.environ.get("HOST_FILTER"):
+        return urlrewrite.get_hostname(url) == filter_hostname
+    return True
