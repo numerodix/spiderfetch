@@ -20,7 +20,7 @@ import web
 def save_session(wb, queue=None):
     hostname = urlrewrite.get_hostname(wb.root.url)
     filename = urlrewrite.hostname_to_filename(hostname)
-    io.write_err("Saving web to %s ..." % shcolor.color(shcolor.YELLOW, filename))
+    io.write_err("Saving session to %s ..." % shcolor.color(shcolor.YELLOW, filename))
     io.serialize(wb, filename + ".web")
     if queue: 
         io.serialize(queue, filename + ".session")
@@ -29,12 +29,15 @@ def save_session(wb, queue=None):
 def restore_session(url):
     hostname = urlrewrite.get_hostname(url)
     filename = urlrewrite.hostname_to_filename(hostname)
-    try:
+    if os.path.exists(filename+".session") and os.path.exists(filename+".web"):
+        io.write_err("Restoring session from %s ..." %\
+                     shcolor.color(shcolor.YELLOW, filename))
         q = io.deserialize(filename + ".session")
+        q = recipe.overrule_records(q)
         wb = io.deserialize(filename + ".web")
+        io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
         return q, wb
-    except IOError:
-        return None, None
+    return None, None
 
 
 def get_url(getter, url, wb, filename, host_filter=False):
@@ -159,14 +162,21 @@ def main(url, queue=None, wb=None):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    a("--host", action="store_true", help="Don't spider outside the root host")
+    parser.usage = "%prog <url> [options]"
+    a("--fetch", action="store_true", help="Fetch urls, don't dump")
+    a("--dump", action="store_true", help="Dump urls, don't fetch")
+    a("--host", action="store_true", help="Only spider this host")
     a("-h", action="callback", callback=io.opts_help, help="Display this message")
     parser.usage = "%prog <url> [options]"
     (opts, args) = parser.parse_args()
     try:
+        if opts.fetch:
+            os.environ["FETCH_ALL"] = str(True)
+        elif opts.dump:
+            os.environ["DUMP_ALL"] = str(True)
         if opts.host:
             os.environ["HOST_FILTER"] = str(True)
-        url = sys.argv[1]
+        url = args[0]
         (q, w) = restore_session(url)
         main(url, queue=q, wb=w)
     except IndexError:
