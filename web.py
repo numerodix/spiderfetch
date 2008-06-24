@@ -78,15 +78,14 @@ class Web(object):
         while paths:
             paths_next = []
             for path in paths:
-                #print "AAAAAAAAAA", path
-                if path[0] == self.root.url:
+                if self.index[path[0]] == self.root:
                     return path
                 for url in self.index.get(path[-1]).incoming:
                     if url not in seen:     # loop detected, drop this path
                         seen[url] = True
                         newpath = path[:]   # careful, this is a copy, not ref!
                         newpath.append(url)
-                        if url == self.root.url:
+                        if self.index[url] == self.root:
                             newpath.reverse()
                             return newpath
                         paths_next.append(newpath)

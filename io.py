@@ -27,8 +27,8 @@ def serialize(o, filename):
         getattr(o, "_to_pickle")()
     except AttributeError:
         pass
-    fp = gzip.GzipFile(filename, 'w')
-    pickle.dump(o, fp)
+    fp = gzip.GzipFile(filename, 'w', compresslevel=1)
+    pickle.dump(o, fp, pickle.HIGHEST_PROTOCOL)
 
 def deserialize(filename):
     fp = gzip.GzipFile(filename, 'r')
