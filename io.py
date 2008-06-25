@@ -40,7 +40,7 @@ def deserialize(filename):
     return o
 
 def opts_help(option, opt_str, value, parser):
-    write_err("%s\n" % parser.usage)
+    write_err("Usage:  %s %s\n\n" % (os.path.basename(sys.argv[0]), parser.usage))
     for o in parser.option_list:
         var = o.metavar or ""
         short = (o._short_opts and o._short_opts[0]) or ""

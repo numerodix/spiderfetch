@@ -15,9 +15,11 @@ class Node(object):
         self.outgoing = {}
 
 class Web(object):
-    def __init__(self):
+    def __init__(self, root=None):
         self.root = None
         self.index = {}
+        if root:
+            self.add_url(root, [])
 
     def __contains__(self, e):
         return e in self.index
@@ -142,7 +144,7 @@ class Web(object):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    parser.usage = "Usage:  %s <web> [options]\n" % sys.argv[0]
+    parser.usage = "<web> [options]"
     a("--dump", action="store_true", help="Dump all urls in web")
     a("--in", metavar="<url>", dest="into", help="Find incoming urls to <url>")
     a("--out", metavar="<url>", help="Find outgoing urls from <url>")

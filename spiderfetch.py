@@ -2,7 +2,7 @@
 
 import optparse
 import os
-import pickle
+import re
 import sys
 import tempfile
 import traceback
@@ -124,6 +124,7 @@ def process_records(working_set, queue, rule, wb):
                 s += "ref    :   |%s|\n" % u
             s += "\n"
             open("error_log", "a").write(s)
+            io.serialize(e, "exc")
         finally:
             try:
                 if filename and os.path.exists(filename):
@@ -133,15 +134,7 @@ def process_records(working_set, queue, rule, wb):
                 pass
 
 
-def main(url, queue=None, wb=None):
-    if not wb:
-        wb = web.Web()
-        wb.add_url(url, [])
-
-    #rules = recipe.load_recipe("jpg.py")
-    rules = recipe.get_default_recipe(url)
-
-    queue = queue or [{"spider": True, "url": wb.root.url}]
+def main(queue, rules, wb):
     for rule in rules:
         depth = rule.get("depth", 1)
         while queue:
@@ -162,7 +155,8 @@ def main(url, queue=None, wb=None):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    parser.usage = "Usage:  %s <url> [<pattern>] [options]\n" % sys.argv[0]
+    parser.usage = "<url> [<pattern>] [options]"
+    a("--recipe", metavar="<recipe>", dest="recipe", help="Use a spidering recipe")
     a("--fetch", action="store_true", help="Fetch urls, don't dump")
     a("--dump", action="store_true", help="Dump urls, don't fetch")
     a("--host", action="store_true", help="Only spider this host")
@@ -175,8 +169,18 @@ if __name__ == "__main__":
             os.environ["DUMP_ALL"] = str(True)
         if opts.host:
             os.environ["HOST_FILTER"] = str(True)
+
         url = args[0]
-        (q, w) = restore_session(url)
-        main(url, queue=q, wb=w)
+        if opts.recipe:
+            (q, w) = restore_session(url)
+        else:
+            pattern = args[1]
+            rules = recipe.get_recipe(url, pattern)
+            queue = recipe.get_queue(url)
+            wb = web.Web(url)
+    except recipe.PatternError, e:
+        io.write_err(shcolor.color(shcolor.RED, "%s\n" % e))
+        sys.exit(1)
     except IndexError:
         io.opts_help(None, None, None, parser)
+    main(queue, rules, wb)
