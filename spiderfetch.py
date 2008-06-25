@@ -20,11 +20,14 @@ import web
 def save_session(wb, queue=None):
     hostname = urlrewrite.get_hostname(wb.root.url)
     filename = urlrewrite.hostname_to_filename(hostname)
-    io.write_err("Saving session to %s ..." %\
-                 shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
+    io.write_err("Saving session to %s ..." %
+         shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
     io.serialize(wb, filename + ".web")
     if queue: 
         io.serialize(queue, filename + ".session")
+    # only web being saved, ie. spidering complete, remove old session
+    elif os.path.exists(io.logdir(filename + ".session")):
+        os.unlink(io.logdir(filename + ".session"))
     io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
 
 def restore_session(url):
@@ -32,8 +35,8 @@ def restore_session(url):
     filename = urlrewrite.hostname_to_filename(hostname)
     if (os.path.exists(io.logdir(filename+".session")) and
        os.path.exists(io.logdir(filename+".web"))):
-        io.write_err("Restoring session from %s ..." %\
-                     shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
+        io.write_err("Restoring session from %s ..." %
+             shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
         q = io.deserialize(filename + ".session")
         q = recipe.overrule_records(q)
         wb = io.deserialize(filename + ".web")
@@ -76,7 +79,8 @@ def process_records(working_set, queue, rule, wb):
                 url = get_url(getter, url, wb, filename, host_filter=host_filter)
 
                 if record.get("fetch"):
-                    os.rename(filename, urlrewrite.url_to_filename(url))
+                    os.rename(filename,
+                      io.safe_filename(urlrewrite.url_to_filename(url)))
 
                 if record.get("spider") and os.path.exists(filename):
                     data = open(filename, 'r').read()

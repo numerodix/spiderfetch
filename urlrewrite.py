@@ -68,12 +68,16 @@ def rewrite_urls(origin_url, urls):
 
 def url_to_filename(url):
     (scheme, netloc, path, query, _) = urlparse.urlsplit(url)
-    (path, ext) = os.path.splitext(path)
-    filename = "_".join([x for x in (scheme, netloc, path, query) if x])
-    filename = re.sub("[^a-zA-Z0-9]", "_", filename)
-    filename = re.sub("_{2,}", "_", filename)
-    filename = re.sub("_$", "", filename)
-    return filename + ext
+    if os.environ.get("SHORT_FILENAMES"):
+        filename = os.path.basename(path)
+    else:
+        (path, ext) = os.path.splitext(path)
+        filename = "_".join([x for x in (scheme, netloc, path, query) if x])
+        filename = re.sub("[^a-zA-Z0-9]", "_", filename)
+        filename = re.sub("_{2,}", "_", filename)
+        filename = re.sub("_$", "", filename)
+        filename = filename + ext
+    return filename
 
 def hostname_to_filename(url):
     return re.sub("[^a-zA-Z0-9]", "_", url)
