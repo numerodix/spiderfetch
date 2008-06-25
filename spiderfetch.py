@@ -160,6 +160,7 @@ if __name__ == "__main__":
     a("--fetch", action="store_true", help="Fetch urls, don't dump")
     a("--dump", action="store_true", help="Dump urls, don't fetch")
     a("--host", action="store_true", help="Only spider this host")
+    a("--depth", type="int", metavar="<depth>", dest="depth", help="Spider to this depth")
     a("-h", action="callback", callback=io.opts_help, help="Display this message")
     (opts, args) = parser.parse_args()
     try:
@@ -169,15 +170,18 @@ if __name__ == "__main__":
             os.environ["DUMP_ALL"] = str(True)
         if opts.host:
             os.environ["HOST_FILTER"] = str(True)
+        if opts.depth:
+            os.environ["DEPTH"] = str(opts.depth)
 
         url = args[0]
+        (q, w) = restore_session(url)
         if opts.recipe:
-            (q, w) = restore_session(url)
+            pass
         else:
             pattern = args[1]
             rules = recipe.get_recipe(url, pattern)
-            queue = recipe.get_queue(url)
-            wb = web.Web(url)
+            queue = q or recipe.get_queue(url)
+            wb = w or web.Web(url)
     except recipe.PatternError, e:
         io.write_err(shcolor.color(shcolor.RED, "%s\n" % e))
         sys.exit(1)

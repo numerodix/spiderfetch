@@ -18,6 +18,9 @@ def rewrite_recipe(recipe, url):
     for rule in recipe:
         if not "depth" in rule:
             rule["depth"] = 1
+        if os.environ.get("DEPTH"):
+            rule["depth"] = int(os.environ.get("DEPTH"))
+
         if os.environ.get("HOST_FILTER"):
             rule["host_filter"] = urlrewrite.get_hostname(url)
         if os.environ.get("FETCH_ALL"):
@@ -37,7 +40,7 @@ def overrule_records(records):
 def load_recipe(filename):
     g, l = {}, {}
     execfile(filename, g, l)
-    return fill_in_recipe(l.get("recipe"))
+    return rewrite_recipe(l.get("recipe"))
 
 def get_recipe(url, pattern):
     #recipe = [{"spider": ".*", "dump": ".*\.jpg", "depth": -1}]
