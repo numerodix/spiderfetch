@@ -30,11 +30,12 @@ def rewrite_recipe(recipe, url):
     return recipe
 
 def overrule_records(records):
-    for record in records:
-        if os.environ.get("FETCH_ALL"):
-            switch_key(record, "dump", "fetch")
-        elif os.environ.get("DUMP_ALL"):
-            switch_key(record, "fetch", "dump")
+    if os.environ.get("FETCH_ALL") or os.environ.get("DUMP_ALL"):
+        for record in records:
+            if os.environ.get("FETCH_ALL"):
+                switch_key(record, "dump", "fetch")
+            elif os.environ.get("DUMP_ALL"):
+                switch_key(record, "fetch", "dump")
     return records
 
 def load_recipe(filename):

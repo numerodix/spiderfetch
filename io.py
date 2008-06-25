@@ -9,6 +9,9 @@ import sys
 import shcolor
 
 
+#LOGDIR = "logs"
+LOGDIR = "."
+
 def write_out(s):
     sys.stdout.write(s)
 
@@ -22,15 +25,43 @@ def write_abort():
 def get_tempfile():
 	return tempfile.mkstemp(prefix=os.path.basename("." + sys.argv[0]) + ".")
 
+def safe_filename(filename, dir=None):
+    if dir:
+        filename = os.path.join(dir, filename)
+    if os.path.exists(filename):
+        path = os.path.dirname(filename)
+        file = os.path.basename(filename)
+        (root, ext) = os.path.splitext(file)
+        serial = 1
+        while os.path.exists(filename):
+            serial += 1
+            filename = os.path.join(path, root + "-" + str(serial) + ext)
+    return os.path.basename(filename)
+
+def create_logdir():
+    if not os.path.exists(LOGDIR):
+        os.makedirs(LOGDIR)
+
+def logdir(filename):
+    return os.path.join(LOGDIR, os.path.basename(filename))
+
+def savelog(s, filename, mode=None):
+    create_logdir()
+    mode = mode or 'w'
+    open(logdir(filename), mode).write(s)
+
 def serialize(o, filename):
+    create_logdir()
     try:
         getattr(o, "_to_pickle")()
     except AttributeError:
         pass
-    fp = gzip.GzipFile(filename, 'w', compresslevel=1)
+    fp = gzip.GzipFile(logdir(filename), 'w', compresslevel=1)
     pickle.dump(o, fp, pickle.HIGHEST_PROTOCOL)
 
 def deserialize(filename):
+    if not os.path.exists(filename):
+        filename = logdir(filename)
     fp = gzip.GzipFile(filename, 'r')
     o = pickle.load(fp)
     try:

@@ -89,9 +89,9 @@ class Fetcher(object):
         given = self.format_size(self.totalsize).rjust(8)
         line = "%s  %s  %s  %s\n" % (status.ljust(10), actual, given, self.url)
         if error:
-            open("error_urls", "a").write(line)
+            io.savelog(line, "error_urls", "a")
         else:
-            open("log_urls", "a").write(line)
+            io.savelog(line, "log_urls", "a")
 
     def truncate_url(self, width, s):
         radius = (len(s) - width + 3) / 2

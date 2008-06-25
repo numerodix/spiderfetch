@@ -20,7 +20,8 @@ import web
 def save_session(wb, queue=None):
     hostname = urlrewrite.get_hostname(wb.root.url)
     filename = urlrewrite.hostname_to_filename(hostname)
-    io.write_err("Saving session to %s ..." % shcolor.color(shcolor.YELLOW, filename))
+    io.write_err("Saving session to %s ..." %\
+                 shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
     io.serialize(wb, filename + ".web")
     if queue: 
         io.serialize(queue, filename + ".session")
@@ -29,9 +30,10 @@ def save_session(wb, queue=None):
 def restore_session(url):
     hostname = urlrewrite.get_hostname(url)
     filename = urlrewrite.hostname_to_filename(hostname)
-    if os.path.exists(filename+".session") and os.path.exists(filename+".web"):
+    if (os.path.exists(io.logdir(filename+".session")) and
+       os.path.exists(io.logdir(filename+".web"))):
         io.write_err("Restoring session from %s ..." %\
-                     shcolor.color(shcolor.YELLOW, filename))
+                     shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
         q = io.deserialize(filename + ".session")
         q = recipe.overrule_records(q)
         wb = io.deserialize(filename + ".web")
@@ -117,14 +119,16 @@ def process_records(working_set, queue, rule, wb):
             save_session(wb, queue=q)
             sys.exit(1)
         except Exception, e:
+            exc_filename = io.safe_filename("exc", dir=io.LOGDIR)
+            io.serialize(e, exc_filename)
             s = traceback.format_exc()
-            s += "\nbad url:   |%s|\n" % url
+            s += "\nBad url:   |%s|\n" % url
             node = wb.get(url)
             for u in node.incoming.keys():
-                s += "ref    :   |%s|\n" % u
+                s += "Ref    :   |%s|\n" % u
+            s += "Exception object serialized to file: %s\n" % exc_filename
             s += "\n"
-            open("error_log", "a").write(s)
-            io.serialize(e, "exc")
+            io.savelog(s, "error_log", "a")
         finally:
             try:
                 if filename and os.path.exists(filename):
@@ -180,8 +184,8 @@ if __name__ == "__main__":
         else:
             pattern = args[1]
             rules = recipe.get_recipe(url, pattern)
-            queue = q or recipe.get_queue(url)
-            wb = w or web.Web(url)
+        queue = q or recipe.get_queue(url)
+        wb = w or web.Web(url)
     except recipe.PatternError, e:
         io.write_err(shcolor.color(shcolor.RED, "%s\n" % e))
         sys.exit(1)
