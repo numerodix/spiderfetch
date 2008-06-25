@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
 import itertools
+import optparse
 import re
+import urllib
 
+import io
 import shcolor
 
 
 SPIDER_SCHEMES = ["ftp", "http", "https"]
 
-testcases = """
+testcases = """\
 <a href="http://1host/path">
 <a href="http://2host/path" >
 <a href='http://3host/path' >
@@ -120,22 +123,23 @@ def colorize_shell(str):
 
 
 if __name__ == "__main__":
-    import sys
-    import urllib
+    parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
+    parser.usage = "[ <url> [options] | --test ]"
+    a("--dump", action="store_true", help="Dump urls")
+    a("-h", action="callback", callback=io.opts_help, help="Display this message")
+    a("--test", action="store_true", help="Run spider testsuite")
+    (opts, args) = parser.parse_args()
     try:
-        dump = False
-        if sys.argv[1] == "--test":
+        if opts.test:
             data = testcases
         else:
-            if len(sys.argv) > 2 and sys.argv[2] == "--dump":
-                dump = True
-            url_obj = urllib.urlopen(sys.argv[1])
-            data = url_obj.read()
+            data = urllib.urlopen(args[0]).read()
 
-        if dump:
+        if opts.dump:
             for url in unique(unbox_it_to_ss(findall(data))):
                 print url
         else:
             print colorize_shell(data)
     except IndexError:
+        io.opts_help(None, None, None, parser)
         print "Usage:  %s [ <url> [--dump] | --test ] " % sys.argv[0]
