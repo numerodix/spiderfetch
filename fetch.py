@@ -3,6 +3,7 @@
 import ftplib
 import httplib
 import mimetools
+import optparse
 import os
 import socket
 import sys
@@ -302,23 +303,27 @@ fetch = _fetcher.fetch
 
 
 if __name__ == "__main__":
+    parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
+    parser.usage = "<url> [<file>] [options]"
+    a("--spidertest", action="store_true", help="Test spider with url")
+    a("-h", action="callback", callback=io.opts_help, help="Display this message")
+    (opts, args) = parser.parse_args()
     try:
         urllib._urlopener = urllib.FancyURLopener()
-        filename = "/dev/null"
-        if sys.argv[1] == "-s":
-            import tempfile
+        url = args[0]
+        if opts.spidertest:
             (fp, filename) = io.get_tempfile()
-            spider(sys.argv[2], filename)
-            os.close(fp); os.unlink(filename)
+            spider(url, filename)
+            os.close(fp) ; os.unlink(filename)
         else:
-            if len(sys.argv) > 2:
-                filename = sys.argv[2]
+            if len(args) > 1:
+                filename = args[1]
             else:
-                filename = urlrewrite.url_to_filename(sys.argv[1])
-            fetch(sys.argv[1], filename)
+                filename = urlrewrite.url_to_filename(url)
+            fetch(url, filename)
     except filetype.WrongFileTypeError:
         os.unlink(filename)
     except KeyboardInterrupt:
         sys.exit()
     except IndexError:
-        print "Usage:  %s [ <url> [<file>] | -s <url> ]" % sys.argv[0]
+        io.opts_help(None, None, None, parser)
