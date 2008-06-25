@@ -142,4 +142,3 @@ if __name__ == "__main__":
             print colorize_shell(data)
     except IndexError:
         io.opts_help(None, None, None, parser)
-        print "Usage:  %s [ <url> [--dump] | --test ] " % sys.argv[0]

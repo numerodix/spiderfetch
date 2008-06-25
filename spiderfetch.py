@@ -184,10 +184,10 @@ if __name__ == "__main__":
         url = args[0]
         (q, w) = restore_session(url)
         if opts.recipe:
-            pass
+            rules = recipe.load_recipe(opts.recipe, url)
         else:
             pattern = args[1]
-            rules = recipe.get_recipe(url, pattern)
+            rules = recipe.get_recipe(pattern, url)
         queue = q or recipe.get_queue(url)
         wb = w or web.Web(url)
     except recipe.PatternError, e:

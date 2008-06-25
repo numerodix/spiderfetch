@@ -6,6 +6,8 @@ import os
 import urlrewrite
 
 
+RECIPEDIR = os.environ.get("RECIPEDIR") or "recipes"
+
 class PatternError(Exception): pass
 
 def switch_key(d, k1, k2):
@@ -27,6 +29,14 @@ def rewrite_recipe(recipe, url):
             switch_key(rule, "dump", "fetch")
         elif os.environ.get("DUMP_ALL"):
             switch_key(rule, "fetch", "dump")
+
+        # compile regexes
+        for r in ("dump", "fetch", "spider"):
+            if r in rule and type(rule[r]) == str:
+                try:
+                    rule[r] = re.compile(rule[r])
+                except re.error, e:
+                    raise PatternError, "Pattern error: %s: %s" % (e.args[0], rule[r])
     return recipe
 
 def overrule_records(records):
@@ -38,21 +48,19 @@ def overrule_records(records):
                 switch_key(record, "fetch", "dump")
     return records
 
-def load_recipe(filename):
+def load_recipe(filename, url):
+    path = os.path.dirname(__file__)
+    filename = os.path.join(path, RECIPEDIR, filename)
+    (root, ext) = os.path.splitext(filename)
+    if not ext:
+        ext = ".py"
+    filename = root + ext
     g, l = {}, {}
     execfile(filename, g, l)
-    return rewrite_recipe(l.get("recipe"))
+    return rewrite_recipe(l.get("recipe"), url)
 
-def get_recipe(url, pattern):
-    #recipe = [{"spider": ".*", "dump": ".*\.jpg", "depth": -1}]
-    #recipe = [{ "spider": ".*", "fetch": "(?i).*\.jpe?g$", "depth": -1 }]
-    #recipe = [{ "spider": ".*", "dump": "(?i).*\.jpe?g$", "depth": -1 }]
-    #recipe = [{ "spider": ".*", "depth": -1 }]
-    try:
-        pattern = re.compile(pattern)
-    except re.error, e:
-        raise PatternError, "Pattern error: %s: %s" % (e.args[0], pattern)
-    recipe = [{ "spider": ".*", "fetch": pattern }]
+def get_recipe(pattern, url):
+    recipe = [{ "fetch": pattern }]
     return rewrite_recipe(recipe, url)
 
 def get_queue(url):
