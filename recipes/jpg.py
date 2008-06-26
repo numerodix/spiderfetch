@@ -1,3 +1,3 @@
 recipe = [
-    { "fetch": "(?i).*\.jpe?g$" },
+    { "spider": ".*", "fetch": "(?i).*\.jpe?g$" },
 ]

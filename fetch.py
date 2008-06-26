@@ -36,6 +36,7 @@ class ErrorAlreadyProcessed(Exception): pass
 class ZeroDataError(Exception): pass
 class DuplicateUrlWarning(Exception): pass
 class UrlRedirectsOffHost(Exception): pass
+class ServiceUnavailableError(Exception): pass
 class ChangedUrlWarning(Exception):
     def __init__(self, new_url):
         self.new_url = new_url
@@ -49,6 +50,8 @@ class MyURLopener(urllib.FancyURLopener):
     
     def http_error_default(self, url, fp, errcode, errmsg, headers):
         self.fetcher.write_progress(error=str(errcode))
+        if errcode == 503:
+            raise ServiceUnavailableError
         raise ErrorAlreadyProcessed
 
     def prompt_user_passwd(self, host, realm):
@@ -75,6 +78,8 @@ class Fetcher(object):
 
         self.is_typechecked = None
         self.fetch_if_wrongtype = False
+
+        self.tries = 2  # XXX review
 
         self.linewidth = 78
         self.actionwidth = 6
@@ -228,8 +233,15 @@ class Fetcher(object):
         try:
             self.write_progress(prestart=True)
 
-            (_, headers) = urllib.urlretrieve(url, filename=self.filename, 
-                reporthook=self.fetch_hook)
+            self.tries = 2
+            while self.tries > 0:
+                self.tries -= 1
+                try:
+                    (_, headers) = urllib.urlretrieve(url, filename=self.filename,
+                        reporthook=self.fetch_hook)
+                    break
+                except ServiceUnavailableError:
+                    raise ErrorAlreadyProcessed
             
             self.download_size = os.path.getsize(self.filename)
 
