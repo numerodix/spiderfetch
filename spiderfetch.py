@@ -53,12 +53,13 @@ def get_url(getter, url, wb, filename, host_filter=False):
             getter(url, filename)
             break
         except fetch.ChangedUrlWarning, e:
-            if e.new_url in wb:
+            u = urlrewrite.rewrite_urls(url, [e.new_url]).next()
+            if u in wb:
                 raise fetch.DuplicateUrlWarning
-            if not recipe.apply_hostfilter(host_filter, e.new_url):
+            if not recipe.apply_hostfilter(host_filter, u):
                 raise fetch.UrlRedirectsOffHost
-            wb.add_ref(url, e.new_url)
-            url = e.new_url
+            wb.add_ref(url, u)
+            url = u
     return url
 
 def process_records(queue, rule, wb):

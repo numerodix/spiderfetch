@@ -54,13 +54,12 @@ def rewrite_urls(origin_url, urls):
         new_u = urlparse.urlunsplit((scheme, netloc, path, query, None))
 
         # no scheme or netloc, it's a path on-site
-        if not scheme and not netloc and path:
+        if not scheme and not netloc and (path or query):
             path_query = urlparse.urlunsplit((None, None, path, query, None))
             new_u = urlparse.urljoin(origin_url, path_query)
 
         # quote spaces
         new_u = new_u.replace(" ", "%20")
-
         if new_u:
             yield new_u
 
