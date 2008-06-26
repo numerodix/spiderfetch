@@ -144,7 +144,6 @@ def process_records(queue, rule, wb):
 
     return newqueue
 
-
 def main(queue, rules, wb):
     outer_queue = queue
     for rule in rules:

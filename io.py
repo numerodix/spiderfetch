@@ -9,7 +9,7 @@ import sys
 import shcolor
 
 
-#LOGDIR = "logs"
+#LOGDIR = os.environ.get("LOGDIR") or "logs"
 LOGDIR = os.environ.get("LOGDIR") or "."
 
 def write_out(s):
