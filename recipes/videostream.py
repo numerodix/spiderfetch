@@ -1,4 +1,5 @@
 recipe = [
-    { "spider": "(?i).*\.(asx|rm)$" },
-    { "dump": "(?i)^(mms|rtsp):\/\/" },
+    {"spider": "(?i)http:\/\/.*\.(asx|rm)$",
+     "dump"  : "(?i)^(mms|rtsp):\/\/",
+     "depth" : 2 },
 ]
