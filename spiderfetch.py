@@ -62,6 +62,38 @@ def get_url(getter, url, wb, filename, host_filter=False):
             url = u
     return url
 
+def qualify_urls(ref_url, urls, rule, newqueue, wb):
+    for url in urls:
+        _dump, _fetch, _spider = False, False, False
+
+        # apply patterns to determine how to qualify url
+        if recipe.apply_mask(rule.get("dump"), url):
+            _dump = True
+        if recipe.apply_mask(rule.get("fetch"), url):
+            _fetch = True
+        if (recipe.apply_mask(rule.get("spider"), url) and
+            recipe.apply_hostfilter(rule.get("host_filter"), url)):
+            _spider = True
+
+        # build a record based on qualification
+        record = {"url" : url}
+        if url not in wb:
+            if _dump:
+                io.write_out("%s\n" % url)
+            if _fetch:
+                record["fetch"] = True
+            if _spider:
+                record["spider"] = True
+
+            if _fetch or _spider:
+                newqueue.append(record)
+
+        # add url to web if it was matched by anything
+        if _dump or _fetch or _spider:
+            wb.add_url(ref_url, [url])
+
+    return newqueue, wb
+
 def process_records(queue, rule, wb):
     newqueue = []
     for record in queue: 
@@ -89,35 +121,9 @@ def process_records(queue, rule, wb):
                     urls = spider.unbox_it_to_ss(spider.findall(data))
                     urls = urlrewrite.rewrite_urls(url, urls)
 
-                    for u in urls:
-                        dum, fet, spi = False, False, False
-                        if recipe.apply_mask(rule.get("dump"), u):
-                            dum = True
-                        if recipe.apply_mask(rule.get("fetch"), u):
-                            fet = True
-                        if (recipe.apply_mask(rule.get("spider"), u) and
-                            recipe.apply_hostfilter(host_filter, u)):
-                            spi = True
+                    (newqueue, wb) = qualify_urls(url, urls, rule, newqueue, wb)
 
-                        r = {"url" : u, "fetch": False, "spider": False}
-
-                        if u not in wb:
-                            if dum:
-                                io.write_out("%s\n" % u)
-                            if fet:
-                                r["fetch"] = True
-                            if spi:
-                                r["spider"] = True
-
-                            if fet or spi:
-                                newqueue.append(r)
-
-                        if dum or fet or spi:
-                            wb.add_url(url, [u])
-
-        except fetch.DuplicateUrlWarning:
-            pass
-        except fetch.UrlRedirectsOffHost:
+        except (fetch.DuplicateUrlWarning, fetch.UrlRedirectsOffHost):
             pass
         except KeyboardInterrupt:
             q = queue[queue.index(record):]
