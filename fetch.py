@@ -79,8 +79,6 @@ class Fetcher(object):
         self.is_typechecked = None
         self.fetch_if_wrongtype = False
 
-        self.tries = 2  # XXX review
-
         self.linewidth = 78
         self.actionwidth = 6
         self.ratewidth = 10
@@ -199,7 +197,8 @@ class Fetcher(object):
     def fetch_hook(self, blocknum, blocksize, totalsize):
         self.download_size = blocknum * blocksize
 
-        step = 12
+        #step = 12
+        step = 5
         if blocknum % step == 0:
             t = time.time()
             interval = t - self.timestamp
@@ -231,17 +230,18 @@ class Fetcher(object):
         """
 
         try:
-            self.write_progress(prestart=True)
-
             self.tries = 2
             while self.tries > 0:
                 self.tries -= 1
                 try:
+                    self.write_progress(prestart=True)
+
                     (_, headers) = urllib.urlretrieve(url, filename=self.filename,
                         reporthook=self.fetch_hook)
                     break
                 except ServiceUnavailableError:
-                    raise ErrorAlreadyProcessed
+                    if not self.tries > 0:
+                        raise ErrorAlreadyProcessed
             
             self.download_size = os.path.getsize(self.filename)
 
