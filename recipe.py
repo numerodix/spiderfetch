@@ -49,12 +49,13 @@ def overrule_records(records):
     return records
 
 def load_recipe(filename, url):
-    path = os.path.dirname(__file__)
-    filename = os.path.join(path, RECIPEDIR, filename)
     (root, ext) = os.path.splitext(filename)
     if not ext:
         ext = ".py"
     filename = root + ext
+    if not os.path.exists(filename):
+        path = os.path.dirname(__file__)
+        filename = os.path.join(path, RECIPEDIR, filename)
     g, l = {}, {}
     execfile(filename, g, l)
     return rewrite_recipe(l.get("recipe"), url)
