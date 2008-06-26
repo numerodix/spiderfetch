@@ -13,6 +13,7 @@ class Node(object):
         self.url = url
         self.incoming = {}
         self.outgoing = {}
+        self.aliases = [url]
 
 class Web(object):
     def __init__(self, root=None):
@@ -48,6 +49,7 @@ class Web(object):
 
     def add_ref(self, url, new_url):
         self.index[new_url] = self.index[url]
+        self.index[url].aliases.append(new_url)
 
     def get(self, url):
         return self.index.get(url)
@@ -56,7 +58,7 @@ class Web(object):
 
     def dump(self):
         for u in self.index:
-            io.write_err("%s\n" % u)
+            io.write_out("%s\n" % u)
 
     def assert_in_web(self, url):
         if url not in self.index:
@@ -64,13 +66,18 @@ class Web(object):
                          shcolor.color(shcolor.YELLOW, url))
             sys.exit(1)
         
-    def find_refs(self, url, out=True):
+    def print_refs(self, url, out=True):
         self.assert_in_web(url)
         node = self.index.get(url)
         l = node.outgoing
         if not out: l = node.incoming
         for u in l:
-            io.write_err("%s\n" % u)
+            io.write_out("%s\n" % u)
+
+    def print_aliases(self, url):
+        self.assert_in_web(url)
+        for u in self.index.get(url).aliases:
+            io.write_out("%s\n" % u)
 
     def get_trace(self, url):
         self.assert_in_web(url)
@@ -94,7 +101,7 @@ class Web(object):
             paths = paths_next
 
     # is this supposed to be longest (in graph) or deepest (from root)?
-    def longest_path(self):
+    def deepest_url(self):
         paths = []
         for url in self.index:
             paths.append(self.get_trace(url))
@@ -113,8 +120,30 @@ class Web(object):
     def print_popular(self):
         tuples = [(len(n.incoming), n) for n in self.index.values()]
         tuples.sort(reverse=True)
+        io.write_err("Showing most referenced urls:\n")
         for (i, node) in tuples[:10]:
             io.write_err(" %s  %s\n" % (str(i).rjust(2), node.url))
+
+    def print_multiple(self):
+        ss = []
+        for n in self.index.values():
+            if len(n.aliases) > 1:
+                tuple = (len(n.aliases), n.aliases)
+                if tuple not in ss:
+                    ss.append(tuple)
+        if ss:
+            ss.sort(reverse=True)
+            ln = len(str(ss[0][0]))  # length of highest count
+            io.write_err("Showing documents with multiple urls:\n")
+            for tuple in ss:
+                (count, aliases) = tuple
+                for url in aliases:
+                    prefix = "".rjust(ln)
+                    if aliases.index(url) == 0:
+                        prefix = str(count).rjust(ln)
+                    io.write_err(" %s  %s\n" % (prefix, url))
+                if not ss.index(tuple) == len(ss)-1:
+                    io.write_err("\n")
 
     def print_stats(self):
         s  = "Root url : %s\n" % self.root.url
@@ -148,9 +177,11 @@ if __name__ == "__main__":
     a("--dump", action="store_true", help="Dump all urls in web")
     a("--in", metavar="<url>", dest="into", help="Find incoming urls to <url>")
     a("--out", metavar="<url>", help="Find outgoing urls from <url>")
+    a("--aliases", metavar="<url>", help="Find other urls for the document at this <url>")
+    a("--multiple", action="store_true", help="Find documents with multiple urls")
     a("--trace", metavar="<url>", help="Trace path from root to <url>")
-    a("--longest", action="store_true", help="Show trace of longest path")
-    a("--popular", action="store_true", help="Find the most referenced url")
+    a("--deepest", action="store_true", help="Trace url furthest from root")
+    a("--popular", action="store_true", help="Find the most referenced urls")
     a("-h", action="callback", callback=io.opts_help, help="Display this message")
     a("--test", action="store_true", help="Run trace loop test")
     (opts, args) = parser.parse_args()
@@ -177,13 +208,17 @@ if __name__ == "__main__":
         if opts.dump:
             wb.dump()
         elif opts.into or opts.out:
-            wb.find_refs((opts.into or opts.out), opts.out)
+            wb.print_refs((opts.into or opts.out), opts.out)
+        elif opts.aliases:
+            wb.print_aliases(opts.aliases)
         elif opts.trace:
             wb.print_trace(wb.get_trace(opts.trace))
-        elif opts.longest:
-            wb.print_trace(wb.longest_path())
+        elif opts.deepest:
+            wb.print_trace(wb.deepest_url())
         elif opts.popular:
             wb.print_popular()
+        elif opts.multiple:
+            wb.print_multiple()
         else:
             wb.print_stats()
     except IndexError:

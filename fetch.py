@@ -159,7 +159,7 @@ class Fetcher(object):
 
         line = "%s ::  %s  " % (action, rate)
 
-        term = "\r"
+        term = (os.environ.get("DEBUG_REDIRECTS") and "\n") or "\r"
         if error or complete: 
             term = "\n"
         io.write_err("%s%s%s%s" % (line, url, size, term))

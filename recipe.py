@@ -53,7 +53,7 @@ def load_recipe(filename, url):
     if not ext:
         ext = ".py"
     filename = root + ext
-    if not os.path.exists(filename):
+    if not os.path.exists(filename):    # try $PWD first
         path = os.path.dirname(__file__)
         filename = os.path.join(path, RECIPEDIR, filename)
     g, l = {}, {}
@@ -61,7 +61,7 @@ def load_recipe(filename, url):
     return rewrite_recipe(l.get("recipe"), url)
 
 def get_recipe(pattern, url):
-    recipe = [{ "fetch": pattern }]
+    recipe = [{ "spider": ".*", "fetch": pattern }]
     return rewrite_recipe(recipe, url)
 
 def get_queue(url):
