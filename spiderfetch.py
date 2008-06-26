@@ -61,8 +61,9 @@ def get_url(getter, url, wb, filename, host_filter=False):
             url = e.new_url
     return url
 
-def process_records(working_set, queue, rule, wb):
-    for record in working_set: 
+def process_records(queue, rule, wb):
+    newqueue = []
+    for record in queue: 
         url = record.get("url")
         host_filter = rule.get("host_filter")
         try:
@@ -108,7 +109,7 @@ def process_records(working_set, queue, rule, wb):
                                 r["spider"] = True
 
                             if fet or spi:
-                                queue.append(r)
+                                newqueue.append(r)
 
                         if dum or fet or spi:
                             wb.add_url(url, [u])
@@ -118,8 +119,8 @@ def process_records(working_set, queue, rule, wb):
         except fetch.UrlRedirectsOffHost:
             pass
         except KeyboardInterrupt:
-            q = working_set[working_set.index(record):]
-            q.extend(queue)
+            q = queue[queue.index(record):]
+            q.extend(newqueue)
             save_session(wb, queue=q)
             sys.exit(1)
         except Exception, e:
@@ -141,22 +142,35 @@ def process_records(working_set, queue, rule, wb):
             except (NameError, OSError):
                 pass
 
+    return newqueue
+
 
 def main(queue, rules, wb):
+    outer_queue = queue
     for rule in rules:
         depth = rule.get("depth", 1)
+
+        # queue will be exhausted in inner loop, but once depth is reached
+        # the contents to spider will fall through to outer_queue
+        outer_queue, queue = [], outer_queue
+
         while queue:
             if depth > 0: 
                 depth -= 1
-            elif depth == 0:
+            elif depth == 0: 
             # There may still be records in the queue, but since depth is reached
             # no more spidering is allowed, so we remove the tags
-                map(lambda r: r.pop("spider"), queue)
-            
-            working_set = queue
-            queue = []
+                for record in queue:
+                    if record.get("spider"):
+                        # if this isn't the last rule, defer spidering to
+                        # outer_queue
+                        if rules.index(rule) < len(rules)-1:
+                            r = record.copy()
+                            r.pop("fetch")
+                            outer_queue.append(r)
+                        record.pop("spider")
 
-            process_records(working_set, queue, rule, wb)
+            queue = process_records(queue, rule, wb)
 
     save_session(wb)
 

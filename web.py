@@ -211,14 +211,14 @@ if __name__ == "__main__":
             wb.print_refs((opts.into or opts.out), opts.out)
         elif opts.aliases:
             wb.print_aliases(opts.aliases)
+        elif opts.multiple:
+            wb.print_multiple()
         elif opts.trace:
             wb.print_trace(wb.get_trace(opts.trace))
         elif opts.deepest:
             wb.print_trace(wb.deepest_url())
         elif opts.popular:
             wb.print_popular()
-        elif opts.multiple:
-            wb.print_multiple()
         else:
             wb.print_stats()
     except IndexError:
