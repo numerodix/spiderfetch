@@ -14,8 +14,8 @@ def logerror(path):
     io.savelog("Path failed: %s\n" % path, "error_dumpstream")
 
 def main():
-    line = sys.stdin.readline()
     try:
+        line = sys.stdin.readline()
         while line:
             path = line.strip()
             filename = os.path.basename(path)
