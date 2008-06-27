@@ -68,22 +68,36 @@ class MyURLopener(urllib.FancyURLopener):
         raise ChangedUrlWarning(newurl)
 
 class Fetcher(object):
-    def __init__(self):
-        self.action = None
-        self.filename = None
-        self.url = None
+    FETCH = 1
+    SPIDER = 2
+    SPIDER_FETCH = 3
+
+    linewidth = 78
+    actionwidth = 6
+    ratewidth = 10
+    sizewidth = 10
+    units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB", 6: "EB"}
+
+    def __init__(self, mode=FETCH, url=None, filename=None):
+
+        self.is_typechecked = False
+        self.fetch_if_wrongtype = False
+        if mode == self.FETCH:
+            self.action = "fetch"
+            self.is_typechecked = True
+        elif mode == self.SPIDER:
+            self.action = "spider"
+        elif mode == self.SPIDER_FETCH:
+            self.action = "spider"
+            self.fetch_if_wrongtype = True
+
+        self.url = url
+        self.filename = filename
+
         self.timestamp = None
         self.download_size = None
         self.totalsize = None
-
-        self.is_typechecked = None
-        self.fetch_if_wrongtype = False
-
-        self.linewidth = 78
-        self.actionwidth = 6
-        self.ratewidth = 10
-        self.sizewidth = 10
-        self.units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB", 6: "EB"}
+        self.tries = os.environ.get("TRIES") or 2
 
         urllib._urlopener = MyURLopener(self)
 
@@ -215,10 +229,34 @@ class Fetcher(object):
             if self.download_size >= filetype.HEADER_SIZE_URLS:
                 self.typecheck_urls(self.filename)
 
-    def load(self, url, filename):
-        self.filename = filename
-        self.url = url
-        self.timestamp = time.time()
+    def load_url(self):
+        while self.tries > 0:
+            self.tries -= 1
+            try:
+                self.write_progress(prestart=True)
+
+                (_, headers) = urllib.urlretrieve(self.url, filename=self.filename,
+                    reporthook=self.fetch_hook)
+
+                self.download_size = os.path.getsize(self.filename)
+
+                if isinstance(headers, mimetools.Message) and headers.fp \
+                   and not headers.fp.read(1):
+                    raise ZeroDataError
+
+                if not self.is_typechecked:
+                    self.typecheck_html(self.filename)
+                if not self.is_typechecked:
+                    self.typecheck_urls(self.filename)
+
+                self.write_progress(complete=True)
+                break
+            except ServiceUnavailableError:
+                # if more tries left then ignore error, else fall through
+                if self.tries <= 0:
+                    raise ErrorAlreadyProcessed
+
+    def launch(self):
 
         """This demonstrates getting the filetype from the HTTP header, which
         is available in the field Content-Type. However, this field is only
@@ -230,31 +268,8 @@ class Fetcher(object):
         """
 
         try:
-            self.tries = 2
-            while self.tries > 0:
-                self.tries -= 1
-                try:
-                    self.write_progress(prestart=True)
-
-                    (_, headers) = urllib.urlretrieve(url, filename=self.filename,
-                        reporthook=self.fetch_hook)
-                    break
-                except ServiceUnavailableError:
-                    if not self.tries > 0:
-                        raise ErrorAlreadyProcessed
-            
-            self.download_size = os.path.getsize(self.filename)
-
-            if isinstance(headers, mimetools.Message) and headers.fp \
-               and not headers.fp.read(1):
-                raise ZeroDataError
-
-            if not self.is_typechecked:
-                self.typecheck_html(self.filename)
-            if not self.is_typechecked:
-                self.typecheck_urls(self.filename)
-
-            self.write_progress(complete=True)
+            self.timestamp = time.time()
+            self.load_url()
         except filetype.WrongFileTypeError:
             self.write_progress(error="wrong type")
         except ZeroDataError:
@@ -290,28 +305,6 @@ class Fetcher(object):
             io.write_abort()
             raise
 
-    def spider(self, url, filename):
-        self.action = "spider"
-        self.is_typechecked = False
-        self.fetch_if_wrongtype = False
-        self.load(url, filename)
-
-    def spider_fetch(self, url, filename):
-        self.action = "spider"
-        self.is_typechecked = False
-        self.fetch_if_wrongtype = True
-        self.load(url, filename)
-
-    def fetch(self, url, filename):
-        self.action = "fetch"
-        self.is_typechecked = True
-        self.fetch_if_wrongtype = False
-        self.load(url, filename)
-
-_fetcher = Fetcher()
-spider = _fetcher.spider
-spider_fetch = _fetcher.spider_fetch
-fetch = _fetcher.fetch
 
 
 if __name__ == "__main__":
@@ -325,14 +318,14 @@ if __name__ == "__main__":
         url = args[0]
         if opts.spidertest:
             (fp, filename) = io.get_tempfile()
-            spider(url, filename)
+            Fetcher(mode=Fetcher.SPIDER, url=url, filename=filename).launch()
             os.close(fp) ; os.unlink(filename)
         else:
             if len(args) > 1:
                 filename = args[1]
             else:
                 filename = urlrewrite.url_to_filename(url)
-            fetch(url, filename)
+            Fetcher(mode=Fetcher.FETCH, url=url, filename=filename).launch()
     except filetype.WrongFileTypeError:
         os.unlink(filename)
     except KeyboardInterrupt:

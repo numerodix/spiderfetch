@@ -64,8 +64,8 @@ def get_recipe(pattern, url):
     recipe = [{ "spider": ".*", "fetch": pattern }]
     return rewrite_recipe(recipe, url)
 
-def get_queue(url):
-    return [{"spider": True, "url": url}]
+def get_queue(url, mode=None):
+    return [{"mode": mode, "url": url}]
 
 def apply_mask(pattern, url):
     if pattern and url:

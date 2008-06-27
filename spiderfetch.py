@@ -44,23 +44,33 @@ def restore_session(url):
         return q, wb
     return None, None
 
+def log_exc(exc, url, wb):
+    exc_filename = io.safe_filename("exc", dir=io.LOGDIR)
+    io.serialize(exc, exc_filename)
+    s = traceback.format_exc()
+    s += "\nBad url:   |%s|\n" % url
+    node = wb.get(url)
+    for u in node.incoming.keys():
+        s += "Ref    :   |%s|\n" % u
+    s += "Exception object serialized to file: %s\n\n" % exc_filename
+    io.savelog(s, "error_log", "a")
 
-def get_url(getter, url, wb, filename, host_filter=False):
+def get_url(fetcher, wb, host_filter=False):
     """http 30x redirects produce a recursion with new urls that may or may not
     have been seen before"""
     while True:
         try:
-            getter(url, filename)
+            fetcher.launch()
             break
         except fetch.ChangedUrlWarning, e:
-            u = urlrewrite.rewrite_urls(url, [e.new_url]).next()
-            if u in wb:
+            url = urlrewrite.rewrite_urls(fetcher.url, [e.new_url]).next()
+            if url in wb:
                 raise fetch.DuplicateUrlWarning
-            if not recipe.apply_hostfilter(host_filter, u):
+            if not recipe.apply_hostfilter(host_filter, url):
                 raise fetch.UrlRedirectsOffHost
-            wb.add_ref(url, u)
-            url = u
-    return url
+            wb.add_ref(fetcher.url, url)
+            fetcher.url = url
+    return fetcher.url
 
 def qualify_urls(ref_url, urls, rule, newqueue, wb):
     for url in urls:
@@ -80,10 +90,12 @@ def qualify_urls(ref_url, urls, rule, newqueue, wb):
         if url not in wb:
             if _dump:
                 io.write_out("%s\n" % url)
-            if _fetch:
-                record["fetch"] = True
-            if _spider:
-                record["spider"] = True
+            if _fetch and _spider:
+                record["mode"] = fetch.Fetcher.SPIDER_FETCH
+            elif _fetch:
+                record["mode"] = fetch.Fetcher.FETCH
+            elif _spider:
+                record["mode"] = fetch.Fetcher.SPIDER
 
             if _fetch or _spider:
                 newqueue.append(record)
@@ -96,32 +108,23 @@ def qualify_urls(ref_url, urls, rule, newqueue, wb):
 
 def process_records(queue, rule, wb):
     newqueue = []
-    for record in queue: 
+    for record in queue:
         url = record.get("url")
-        host_filter = rule.get("host_filter")
         try:
-            getter = None
-            if record.get("fetch") and record.get("spider"):
-                getter = fetch.spider_fetch
-            elif record.get("fetch"):
-                getter = fetch.fetch
-            elif record.get("spider"):
-                getter = fetch.spider
+            (fp, filename) = io.get_tempfile()
+            f = fetch.Fetcher(mode=record.get("mode"), url=url, filename=filename)
+            url = get_url(f, wb, host_filter=rule.get("host_filter"))
 
-            if getter:
-                (fp, filename) = io.get_tempfile()
-                url = get_url(getter, url, wb, filename, host_filter=host_filter)
+            if record.get("mode") == fetch.Fetcher.SPIDER:
+                data = open(filename, 'r').read()
+                urls = spider.unbox_it_to_ss(spider.findall(data))
+                urls = urlrewrite.rewrite_urls(url, urls)
 
-                if record.get("fetch"):
-                    os.rename(filename,
-                      io.safe_filename(urlrewrite.url_to_filename(url)))
+                (newqueue, wb) = qualify_urls(url, urls, rule, newqueue, wb)
 
-                if record.get("spider") and os.path.exists(filename):
-                    data = open(filename, 'r').read()
-                    urls = spider.unbox_it_to_ss(spider.findall(data))
-                    urls = urlrewrite.rewrite_urls(url, urls)
-
-                    (newqueue, wb) = qualify_urls(url, urls, rule, newqueue, wb)
+            if record.get("mode") == fetch.Fetcher.FETCH:
+                os.rename(filename,
+                  io.safe_filename(urlrewrite.url_to_filename(url)))
 
         except (fetch.DuplicateUrlWarning, fetch.UrlRedirectsOffHost):
             pass
@@ -130,17 +133,8 @@ def process_records(queue, rule, wb):
             q.extend(newqueue)
             save_session(wb, queue=q)
             sys.exit(1)
-        except Exception, e:
-            exc_filename = io.safe_filename("exc", dir=io.LOGDIR)
-            io.serialize(e, exc_filename)
-            s = traceback.format_exc()
-            s += "\nBad url:   |%s|\n" % url
-            node = wb.get(url)
-            for u in node.incoming.keys():
-                s += "Ref    :   |%s|\n" % u
-            s += "Exception object serialized to file: %s\n" % exc_filename
-            s += "\n"
-            io.savelog(s, "error_log", "a")
+        except Exception, exc:
+            log_exc(exc, url, wb)
         finally:
             try:
                 if filename and os.path.exists(filename):
@@ -166,15 +160,18 @@ def main(queue, rules, wb):
             elif depth == 0: 
             # There may still be records in the queue, but since depth is reached
             # no more spidering is allowed, so we remove the tags
-                for record in queue:
-                    if record.get("spider"):
-                        # if this isn't the last rule, defer spidering to
-                        # outer_queue
-                        if rules.index(rule) < len(rules)-1:
-                            r = record.copy()
-                            r.pop("fetch")
-                            outer_queue.append(r)
-                        record.pop("spider")
+                fs = [r for r in queue if r.get("mode") == fetch.Fetcher.FETCH]
+                ss = [r for r in queue if r.get("mode") == fetch.Fetcher.SPIDER]
+                sfs = [r for r in queue if r.get("mode") == fetch.Fetcher.SPIDER_FETCH]
+                for r in sfs:
+                    r2 = r.copy()
+                    r["mode"] = fetch.Fetcher.FETCH
+                    fs.append(r)
+                    r2["mode"] = fetch.Fetcher.SPIDER
+                    ss.append(r2)
+                if rules.index(rule) < len(rules)-1:
+                    outer_queue = ss
+                queue = fs
 
             queue = process_records(queue, rule, wb)
 
@@ -208,7 +205,7 @@ if __name__ == "__main__":
         else:
             pattern = args[1]
             rules = recipe.get_recipe(pattern, url)
-        queue = q or recipe.get_queue(url)
+        queue = q or recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
         wb = w or web.Web(url)
     except recipe.PatternError, e:
         io.write_err(shcolor.color(shcolor.RED, "%s\n" % e))
