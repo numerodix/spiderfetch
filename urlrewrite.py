@@ -67,8 +67,9 @@ def rewrite_urls(origin_url, urls):
 
 def url_to_filename(url):
     (scheme, netloc, path, query, _) = urlparse.urlsplit(url)
-    if os.environ.get("ORIG_FILENAMES"):
-        filename = os.path.basename(path)
+    file = os.path.basename(path)
+    if os.environ.get("ORIG_FILENAMES") and file:
+        filename = file
     else:
         (path, ext) = os.path.splitext(path)
         filename = "_".join([x for x in (scheme, netloc, path, query) if x])
