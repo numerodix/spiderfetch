@@ -29,7 +29,10 @@ http://fc02.deviantart.com/fs11/i/2006/171/b/1/atomic_by_numerodix.jpg
 user_agent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"
 
 # don't wait forever
-socket.setdefaulttimeout(10)
+timeout = 10
+if os.environ.get("SOCKET_TIMEOUT"):
+    timeout = int(os.environ.get("SOCKET_TIMEOUT"))
+socket.setdefaulttimeout(timeout)
 
 
 class ErrorAlreadyProcessed(Exception): pass
