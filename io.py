@@ -12,7 +12,7 @@ import shcolor
 
 _help_header = "spiderfetch tool suite\n\n"
 
-_tools_help="""\
+_help_tools="""\
 == spiderfetch ==
 
 Spiders recursively for urls, starting from <url>. Driven either by <pattern>
@@ -46,6 +46,19 @@ An automation module for use with mplayer to record media streams. Reads urls
 from a file and records with mplayer.
 """
 
+_help_vars="""\
+SOCKET_TIMEOUT   Seconds to wait before calling a socket timeout.
+TRIES            Number of tries on 503 Service Unavailable.
+
+ORIG_FILENAMES   Save files with their original filenames on the host (1) or
+  use filenames generated from the full url to avoid name collisions (0).
+TMPDIR           Temp directory for downloads.
+LOGDIR           Directory to use for logfiles.
+
+TERM             When set and not 'dumb' gives color output.
+DEBUG_FETCH      Write newlines after every update to see the full output.
+"""
+
 #LOGDIR = os.environ.get("LOGDIR") or "logs"
 LOGDIR = os.environ.get("LOGDIR") or "."
 
@@ -60,7 +73,7 @@ def write_abort():
     write_err("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
 
 def get_tempfile():
-	return tempfile.mkstemp(prefix=os.path.basename("." + sys.argv[0]) + ".")
+	return tempfile.mkstemp(prefix="."+os.path.basename(sys.argv[0])+".")
 
 def safe_filename(filename, dir=None):
     if dir:
@@ -133,13 +146,18 @@ def opts_help(option, opt_str, value, parser):
     sys.exit(2)
 
 def help_tools(option, opt_str, value, parser):
-    write_err(_help_header+_tools_help)
+    write_err(_help_header+_help_tools)
+    sys.exit(2)
+
+def help_vars(option, opt_str, value, parser):
+    write_err(_help_header+_help_vars)
     sys.exit(2)
 
 def parse_args(parser):
     a = parser.add_option
     a("-h", action="callback", callback=opts_help, help="Display this message")
     a("--tools", action="callback", callback=help_tools, help="Descriptions of the tools")
+    a("--vars", action="callback", callback=help_vars, help="Environmental variables")
     return parser.parse_args()
 
 

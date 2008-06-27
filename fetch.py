@@ -339,7 +339,7 @@ if __name__ == "__main__":
             if len(args) > 1:
                 filename = args[1]
             else:
-                os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or str(True)
+                os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or "1"
                 filename = io.safe_filename(urlrewrite.url_to_filename(url))
             Fetcher(mode=Fetcher.FETCH, url=url, filename=filename).launch()
     except filetype.WrongFileTypeError:

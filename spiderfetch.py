@@ -194,11 +194,11 @@ if __name__ == "__main__":
     (opts, args) = io.parse_args(parser)
     try:
         if opts.fetch:
-            os.environ["FETCH_ALL"] = str(True)
+            os.environ["FETCH_ALL"] = "1"
         elif opts.dump:
-            os.environ["DUMP_ALL"] = str(True)
+            os.environ["DUMP_ALL"] = "1"
         if opts.host:
-            os.environ["HOST_FILTER"] = str(True)
+            os.environ["HOST_FILTER"] = "1"
         if opts.depth:
             os.environ["DEPTH"] = str(opts.depth)
 
