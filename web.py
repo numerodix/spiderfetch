@@ -119,9 +119,10 @@ class Web(object):
     def print_popular(self):
         tuples = [(len(n.incoming), n) for n in self.index.values()]
         tuples.sort(reverse=True)
+        ln = len(str(tuples[0][0]).rjust(2))
         io.write_err("Showing most referenced urls:\n")
         for (i, node) in tuples[:10]:
-            io.write_err(" %s  %s\n" % (str(i).rjust(2), node.url))
+            io.write_err(" %s  %s\n" % (str(i).rjust(ln), node.url))
 
     def print_multiple(self):
         ss = []
