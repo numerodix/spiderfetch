@@ -38,33 +38,39 @@ def safe_filename(filename, dir=None):
             filename = os.path.join(path, root + "-" + str(serial) + ext)
     return os.path.basename(filename)
 
-def create_logdir():
-    if not os.path.exists(LOGDIR):
-        os.makedirs(LOGDIR)
+def create_dir(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
-def logdir(filename):
-    path = os.path.dirname(filename)
-    if path:
-        return filename
-    return os.path.join(LOGDIR, os.path.basename(filename))
+def file_exists(filename, dir=None):
+    if dir:
+        filename = os.path.join(dir, filename)
+    return os.path.exists(filename)
+
+def delete(filename, dir=None):
+    if dir:
+        filename = os.path.join(dir, filename)
+    return os.unlink(filename)
 
 def savelog(s, filename, mode=None):
-    create_logdir()
+    create_dir(LOGDIR)
     mode = mode or 'w'
-    open(logdir(filename), mode).write(s)
+    open(os.path.join(LOGDIR, filename), mode).write(s)
 
-def serialize(o, filename):
-    create_logdir()
+def serialize(o, filename, dir=None):
+    if dir:
+        create_dir(dir)
+        filename = os.path.join(dir, filename)
     try:
         getattr(o, "_to_pickle")()
     except AttributeError:
         pass
     #fp = gzip.GzipFile(logdir(filename), 'w', compresslevel=1)
-    pickle.dump(o, open(logdir(filename), 'w'), pickle.HIGHEST_PROTOCOL)
+    pickle.dump(o, open(filename, 'w'), pickle.HIGHEST_PROTOCOL)
 
-def deserialize(filename):
-    if not os.path.exists(filename):
-        filename = logdir(filename)
+def deserialize(filename, dir=None):
+    if dir:
+        filename = os.path.join(dir, filename)
     #fp = gzip.GzipFile(filename, 'r')
     o = pickle.load(open(filename, 'r'))
     try:

@@ -22,31 +22,31 @@ def save_session(wb, queue=None):
     filename = urlrewrite.hostname_to_filename(hostname)
     io.write_err("Saving session to %s ..." %
          shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
-    io.serialize(wb, filename + ".web")
+    io.serialize(wb, filename + ".web", dir=io.LOGDIR)
     if queue: 
-        io.serialize(queue, filename + ".session")
+        io.serialize(queue, filename + ".session", dir=io.LOGDIR)
     # only web being saved, ie. spidering complete, remove old session
-    elif os.path.exists(io.logdir(filename + ".session")):
-        os.unlink(io.logdir(filename + ".session"))
+    elif io.file_exists(filename + ".session", dir=io.LOGDIR):
+        io.delete(filename + ".session", dir=io.LOGDIR)
     io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
 
 def restore_session(url):
     hostname = urlrewrite.get_hostname(url)
     filename = urlrewrite.hostname_to_filename(hostname)
-    if (os.path.exists(io.logdir(filename+".session")) and
-       os.path.exists(io.logdir(filename+".web"))):
+    if (io.file_exists(filename + ".session", dir=io.LOGDIR) and
+        io.file_exists(filename + ".web", dir=io.LOGDIR)):
         io.write_err("Restoring session from %s ..." %
              shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
-        q = io.deserialize(filename + ".session")
+        q = io.deserialize(filename + ".session", dir=io.LOGDIR)
         q = recipe.overrule_records(q)
-        wb = io.deserialize(filename + ".web")
+        wb = io.deserialize(filename + ".web", dir=io.LOGDIR)
         io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
         return q, wb
     return None, None
 
 def log_exc(exc, url, wb):
     exc_filename = io.safe_filename("exc", dir=io.LOGDIR)
-    io.serialize(exc, exc_filename)
+    io.serialize(exc, exc_filename, dir=io.LOGDIR)
     s = traceback.format_exc()
     s += "\nBad url:   |%s|\n" % url
     node = wb.get(url)
