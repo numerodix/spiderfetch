@@ -164,8 +164,8 @@ def main(queue, rules, wb):
                       (fetch.Fetcher.FETCH or fetch.Fetcher.SPIDER_FETCH)]
                 ss = [r for r in queue if r.get("mode") ==\
                       (fetch.Fetcher.SPIDER or fetch.Fetcher.SPIDER_FETCH)]
-                [r["mode"] = fetch.Fetcher.FETCH for r in fs]
-                [r["mode"] = fetch.Fetcher.SPIDER for r in ss]
+                for r in fs: r["mode"] = fetch.Fetcher.FETCH
+                for r in ss: r["mode"] = fetch.Fetcher.SPIDER
                 # if this isn't the last rule, defer remaining spidering to the
                 # next iteration
                 if rules.index(rule) < len(rules)-1:
