@@ -80,7 +80,7 @@ def deserialize(filename, dir=None):
     return o
 
 def opts_help(option, opt_str, value, parser):
-    header = "spiderfetch tool suite\n"
+    header = "spiderfetch tool suite\n\n"
     write_err(header+"Usage:  %s %s\n\n" % (os.path.basename(sys.argv[0]), parser.usage))
     for o in parser.option_list:
         var = o.metavar or ""
