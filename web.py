@@ -128,21 +128,21 @@ class Web(object):
         ss = []
         for n in self.index.values():
             if len(n.aliases) > 1:
-                tuple = (len(n.aliases), n.aliases)
-                if tuple not in ss:
-                    ss.append(tuple)
+                pair = (len(n.aliases), n.aliases)
+                if pair not in ss:
+                    ss.append(pair)
         if ss:
             ss.sort(reverse=True)
             ln = len(str(ss[0][0]))  # length of highest count
             io.write_err("Showing documents with multiple urls:\n")
-            for tuple in ss:
-                (count, aliases) = tuple
+            for pair in ss:
+                (count, aliases) = pair
                 for url in aliases:
                     prefix = "".rjust(ln)
                     if aliases.index(url) == 0:
                         prefix = str(count).rjust(ln)
                     io.write_err(" %s  %s\n" % (prefix, url))
-                if not ss.index(tuple) == len(ss)-1:
+                if not ss.index(pair) == len(ss)-1:
                     io.write_err("\n")
 
     def print_stats(self):
