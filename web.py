@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import optparse
 import pickle
 import sys
 
@@ -172,8 +171,7 @@ class Web(object):
 
 
 if __name__ == "__main__":
-    parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    parser.usage = "<web> [options]"
+    (parser, a) = io.init_opts("<web> [options]")
     a("--dump", action="store_true", help="Dump all urls in web")
     a("--in", metavar="<url>", dest="into", help="Find incoming urls to <url>")
     a("--out", metavar="<url>", help="Find outgoing urls from <url>")
@@ -182,9 +180,8 @@ if __name__ == "__main__":
     a("--trace", metavar="<url>", help="Trace path from root to <url>")
     a("--deepest", action="store_true", help="Trace url furthest from root")
     a("--popular", action="store_true", help="Find the most referenced urls")
-    a("-h", action="callback", callback=io.opts_help, help="Display this message")
     a("--test", action="store_true", help="Run trace loop test")
-    (opts, args) = parser.parse_args()
+    (opts, args) = io.parse_args(parser)
     try:
         if opts.test:
             wb = Web()

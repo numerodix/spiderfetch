@@ -36,8 +36,6 @@ def main():
 
 
 if __name__ == "__main__":
-    parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    parser.usage = "< <file>"
-    a("-h", action="callback", callback=io.opts_help, help="Display this message")
-    (opts, args) = parser.parse_args()
+    (parser, a) = io.init_opts("< <file>")
+    (opts, args) = io.parse_args(parser)
     main()

@@ -3,7 +3,6 @@
 import ftplib
 import httplib
 import mimetools
-import optparse
 import os
 import socket
 import sys
@@ -220,7 +219,6 @@ class Fetcher(object):
         if blocknum == 1:
             self.started = True
 
-        #step = 12
         step = 5
         if blocknum > 0 and blocknum % step == 0:
             t = time.time()
@@ -327,11 +325,9 @@ class Fetcher(object):
 
 
 if __name__ == "__main__":
-    parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    parser.usage = "<url> [<file>] [options]"
+    (parser, a) = io.init_opts("<url> [<file>] [options]")
     a("--spidertest", action="store_true", help="Test spider with url")
-    a("-h", action="callback", callback=io.opts_help, help="Display this message")
-    (opts, args) = parser.parse_args()
+    (opts, args) = io.parse_args(parser)
     try:
         urllib._urlopener = urllib.FancyURLopener()
         url = args[0]

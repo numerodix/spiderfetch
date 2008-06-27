@@ -2,6 +2,7 @@
 
 import gzip
 import cPickle as pickle    # cPickle is supposed to be faster
+import optparse
 import os
 import tempfile
 import sys
@@ -89,6 +90,16 @@ def opts_help(option, opt_str, value, parser):
         argument = "%s %s %s" % (short, long, var)
         write_err("  %s %s\n" % (argument.strip().ljust(25), o.help))
     sys.exit(2)
+
+def init_opts(usage):
+    parser = optparse.OptionParser(add_help_option=None)
+    parser.usage = usage
+    return parser, parser.add_option
+
+def parse_args(parser):
+    a = parser.add_option
+    a("-h", action="callback", callback=opts_help, help="Display this message")
+    return parser.parse_args()
 
 
 

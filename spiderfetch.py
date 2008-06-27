@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import optparse
 import os
 import re
 import sys
@@ -186,15 +185,13 @@ def main(queue, rules, wb):
 
 
 if __name__ == "__main__":
-    parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    parser.usage = "<url> [<pattern>] [options]"
+    (parser, a) = io.init_opts("<url> [<pattern>] [options]")
     a("--recipe", metavar="<recipe>", dest="recipe", help="Use a spidering recipe")
     a("--fetch", action="store_true", help="Fetch urls, don't dump")
     a("--dump", action="store_true", help="Dump urls, don't fetch")
     a("--host", action="store_true", help="Only spider this host")
     a("--depth", type="int", metavar="<depth>", dest="depth", help="Spider to this depth")
-    a("-h", action="callback", callback=io.opts_help, help="Display this message")
-    (opts, args) = parser.parse_args()
+    (opts, args) = io.parse_args(parser)
     try:
         if opts.fetch:
             os.environ["FETCH_ALL"] = str(True)

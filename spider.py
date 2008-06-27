@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import itertools
-import optparse
 import re
 import urllib
 
@@ -137,12 +136,10 @@ def colorize_shell(str):
 
 
 if __name__ == "__main__":
-    parser = optparse.OptionParser(add_help_option=None) ; a = parser.add_option
-    parser.usage = "[ <url> [options] | --test ]"
+    (parser, a) = io.init_opts("[ <url> [options] | --test ]")
     a("--dump", action="store_true", help="Dump urls")
-    a("-h", action="callback", callback=io.opts_help, help="Display this message")
     a("--test", action="store_true", help="Run spider testsuite")
-    (opts, args) = parser.parse_args()
+    (opts, args) = io.parse_args(parser)
     try:
         if opts.test:
             data = testcases
