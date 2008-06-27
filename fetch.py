@@ -248,10 +248,17 @@ class Fetcher(object):
                     reporthook=self.fetch_hook)
 
                 self.download_size = os.path.getsize(self.filename)
+                if not self.download_size:
+                    raise ZeroDataError
+
+                """This was a check to detect zero data transmissions, but it
+                causes ftp indices to fail, so it may be worthless. Reading the
+                filesize might be more useful.
 
                 if isinstance(headers, mimetools.Message) and headers.fp \
                    and not headers.fp.read(1):
                     raise ZeroDataError
+                """
 
                 if not self.is_typechecked:
                     self.typecheck_html(self.filename)
