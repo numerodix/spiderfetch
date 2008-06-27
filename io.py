@@ -56,13 +56,15 @@ def serialize(o, filename):
         getattr(o, "_to_pickle")()
     except AttributeError:
         pass
-    fp = gzip.GzipFile(logdir(filename), 'w', compresslevel=1)
+    #fp = gzip.GzipFile(logdir(filename), 'w', compresslevel=1)
+    fp = open(logdir(filename), 'w')
     pickle.dump(o, fp, pickle.HIGHEST_PROTOCOL)
 
 def deserialize(filename):
     if not os.path.exists(filename):
         filename = logdir(filename)
-    fp = gzip.GzipFile(filename, 'r')
+    #fp = gzip.GzipFile(filename, 'r')
+    fp = open(filename, 'r')
     o = pickle.load(fp)
     try:
         getattr(o, "_from_pickle")()
