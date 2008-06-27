@@ -43,6 +43,9 @@ def create_logdir():
         os.makedirs(LOGDIR)
 
 def logdir(filename):
+    path = os.path.dirname(filename)
+    if path:
+        return filename
     return os.path.join(LOGDIR, os.path.basename(filename))
 
 def savelog(s, filename, mode=None):
@@ -57,15 +60,13 @@ def serialize(o, filename):
     except AttributeError:
         pass
     #fp = gzip.GzipFile(logdir(filename), 'w', compresslevel=1)
-    fp = open(logdir(filename), 'w')
-    pickle.dump(o, fp, pickle.HIGHEST_PROTOCOL)
+    pickle.dump(o, open(logdir(filename), 'w'), pickle.HIGHEST_PROTOCOL)
 
 def deserialize(filename):
     if not os.path.exists(filename):
         filename = logdir(filename)
     #fp = gzip.GzipFile(filename, 'r')
-    fp = open(filename, 'r')
-    o = pickle.load(fp)
+    o = pickle.load(open(filename, 'r'))
     try:
         getattr(o, "_from_pickle")()
     except AttributeError:
@@ -73,7 +74,8 @@ def deserialize(filename):
     return o
 
 def opts_help(option, opt_str, value, parser):
-    write_err("Usage:  %s %s\n\n" % (os.path.basename(sys.argv[0]), parser.usage))
+    header = "spiderfetch tool suite\n"
+    write_err(header+"Usage:  %s %s\n\n" % (os.path.basename(sys.argv[0]), parser.usage))
     for o in parser.option_list:
         var = o.metavar or ""
         short = (o._short_opts and o._short_opts[0]) or ""
