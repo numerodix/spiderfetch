@@ -4,10 +4,10 @@ import os
 import re
 import urlparse
 
-import spider
 
+SCHEMES = ["ftp", "http", "https"]
 
-_scheme = "(?P<scheme>%s)$" % "".join(reduce(lambda x, y: "%s|%s" % (x, y), spider.SPIDER_SCHEMES))
+_scheme = "(?P<scheme>%s)$" % "".join(reduce(lambda x, y: "%s|%s" % (x, y), SCHEMES))
 scheme_regex = re.compile(_scheme)
 
 class InvalidUrl(Exception): pass
@@ -31,6 +31,10 @@ def assemble_netloc(username, password, hostname, port):
 def get_hostname(url):
     pack = urlparse.urlsplit(url)
     return pack.hostname
+
+def get_scheme(url):
+    pack = urlparse.urlsplit(url)
+    return pack.scheme
 
 def rewrite_urls(origin_url, urls):
     origin_pack = urlparse.urlsplit(origin_url)

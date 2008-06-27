@@ -17,10 +17,10 @@ def is_html(data):
     if data and re.match(_html_re, data):
         return True
 
-def has_urls(data):
+def has_urls(data, url):
     if data: 
         try:
-            spider.findall(data).next()
+            spider.findall(data, url).next()
             return True
         except StopIteration:
             pass

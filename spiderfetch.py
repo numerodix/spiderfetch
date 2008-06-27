@@ -117,7 +117,7 @@ def process_records(queue, rule, wb):
 
             if record.get("mode") == fetch.Fetcher.SPIDER:
                 data = open(filename, 'r').read()
-                urls = spider.unbox_it_to_ss(spider.findall(data))
+                urls = spider.unbox_it_to_ss(spider.findall(data, url))
                 urls = urlrewrite.rewrite_urls(url, urls)
 
                 (newqueue, wb) = qualify_urls(url, urls, rule, newqueue, wb)

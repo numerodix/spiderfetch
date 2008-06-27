@@ -7,9 +7,8 @@ import urllib
 
 import io
 import shcolor
+import urlrewrite
 
-
-SPIDER_SCHEMES = ["ftp", "http", "https"]
 
 testcases = """\
 <a href="http://1host/path">
@@ -40,8 +39,21 @@ IMG = re.compile(_img)
 _uri_match = """(?ims)(?P<url>[a-z][a-z0-9+.-]{1,120}:\/\/(([a-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[a-f0-9]{2}){1,333}([a-z0-9][a-z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000})?)"""
 URI_MATCH = re.compile(_uri_match)
 
+#-rw-r--r--    1 1042     1042     28620269 Apr 19  2007 stage1-x86-2007.0.tar.bz2
+_ftp_listing = """.[^ ]{9}(?:\s+[^ ]+){7}\s+(?P<url>.*)$"""
+FTP_LISTING = re.compile(_ftp_listing)
+
 def find_with_r(r, s):
     return re.finditer(r, s)
+
+def spider_ftp(s):
+    lines = s.splitlines()
+    filler = ""
+    for line in lines:
+        it = re.finditer(FTP_LISTING, filler+line)
+        filler += (2+len(line))*" "
+        for match in it:
+            yield match
 
 def spider(s):
     for it in [find_with_r(r, s) for r in (LINK, FRAME, IMG)]:
@@ -51,8 +63,10 @@ def spider(s):
 def harvest(s):
     return find_with_r(URI_MATCH, s)
 
-def findall(s):
+def findall(s, url):
     its = [spider(s), harvest(s)]
+    if urlrewrite.get_scheme(url) == "ftp":
+        its.append(spider_ftp(s))
     for (idx, it) in enumerate(its):
         for match in it: 
             yield match
@@ -62,7 +76,7 @@ def unbox_it_to_ss(it):
         yield match.group('url')
 
 def group_by_regex(s):
-    its = [spider(s), harvest(s)]
+    its = [spider(s), harvest(s), spider_ftp(s)]
     for (idx, it) in enumerate(its):
         for match in it: 
             yield (idx, match)
@@ -133,11 +147,12 @@ if __name__ == "__main__":
         if opts.test:
             data = testcases
         else:
-            data = urllib.urlopen(args[0]).read()
+            url = args[0]
+            data = urllib.urlopen(url).read()
 
         if opts.dump:
-            for url in unique(unbox_it_to_ss(findall(data))):
-                print url
+            for u in unique(unbox_it_to_ss(findall(data, url))):
+                print u
         else:
             print colorize_shell(data)
     except IndexError:

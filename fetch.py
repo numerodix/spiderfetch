@@ -202,7 +202,7 @@ class Fetcher(object):
         if not self.is_typechecked:
             data = open(self.filename, 'r').read()
             if data:
-                if not filetype.has_urls(data):
+                if not filetype.has_urls(data, self.url):
                     self.throw_type_error()
                 self.is_typechecked = True
 
