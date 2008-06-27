@@ -159,16 +159,15 @@ def main(queue, rules, wb):
                 depth -= 1
             elif depth == 0: 
             # There may still be records in the queue, but since depth is reached
-            # no more spidering is allowed, so we remove the tags
-                fs = [r for r in queue if r.get("mode") == fetch.Fetcher.FETCH]
-                ss = [r for r in queue if r.get("mode") == fetch.Fetcher.SPIDER]
-                sfs = [r for r in queue if r.get("mode") == fetch.Fetcher.SPIDER_FETCH]
-                for r in sfs:
-                    r2 = r.copy()
-                    r["mode"] = fetch.Fetcher.FETCH
-                    fs.append(r)
-                    r2["mode"] = fetch.Fetcher.SPIDER
-                    ss.append(r2)
+            # no more spidering is allowed, so we remove the records
+                fs = [r for r in queue if r.get("mode") ==
+                      (fetch.Fetcher.FETCH or fetch.Fetcher.SPIDER_FETCH)]
+                ss = [r for r in queue if r.get("mode") ==\
+                      (fetch.Fetcher.SPIDER or fetch.Fetcher.SPIDER_FETCH)]
+                [r["mode"] = fetch.Fetcher.FETCH for r in fs]
+                [r["mode"] = fetch.Fetcher.SPIDER for r in ss]
+                # if this isn't the last rule, defer remaining spidering to the
+                # next iteration
                 if rules.index(rule) < len(rules)-1:
                     outer_queue = ss
                 queue = fs
