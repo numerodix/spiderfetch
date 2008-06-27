@@ -100,7 +100,6 @@ class Fetcher(object):
         self.timestamp = None
         self.download_size = None
         self.totalsize = None
-        self.tries = os.environ.get("TRIES") or 2
 
         self.started = False
 
@@ -278,7 +277,11 @@ class Fetcher(object):
         """
 
         try:
+            self.tries = os.environ.get("TRIES") or 2
             self.load_url()
+        except ChangedUrlWarning, e:
+            self.write_progress(error="redirect")
+            raise
         except filetype.WrongFileTypeError:
             self.write_progress(error="wrong type")
         except ZeroDataError:
