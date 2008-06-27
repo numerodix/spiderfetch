@@ -99,6 +99,8 @@ class Fetcher(object):
         self.totalsize = None
         self.tries = os.environ.get("TRIES") or 2
 
+        self.started = False
+
         urllib._urlopener = MyURLopener(self)
 
     def log_url(self, status, error=False):
@@ -211,9 +213,14 @@ class Fetcher(object):
     def fetch_hook(self, blocknum, blocksize, totalsize):
         self.download_size = blocknum * blocksize
 
+        if blocknum == 0:
+            self.timestamp = time.time()
+        if blocknum == 1:
+            self.started = True
+
         #step = 12
         step = 5
-        if blocknum % step == 0:
+        if blocknum > 0 and blocknum % step == 0:
             t = time.time()
             interval = t - self.timestamp
             self.timestamp = t
@@ -268,7 +275,6 @@ class Fetcher(object):
         """
 
         try:
-            self.timestamp = time.time()
             self.load_url()
         except filetype.WrongFileTypeError:
             self.write_progress(error="wrong type")
@@ -324,7 +330,8 @@ if __name__ == "__main__":
             if len(args) > 1:
                 filename = args[1]
             else:
-                filename = urlrewrite.url_to_filename(url)
+                os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or str(True)
+                filename = io.safe_filename(urlrewrite.url_to_filename(url))
             Fetcher(mode=Fetcher.FETCH, url=url, filename=filename).launch()
     except filetype.WrongFileTypeError:
         os.unlink(filename)
