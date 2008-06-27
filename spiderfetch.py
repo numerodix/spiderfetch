@@ -145,6 +145,23 @@ def process_records(queue, rule, wb):
 
     return newqueue
 
+def split_queue(queue, lastrule=False):
+    fetch_queue, spider_queue = [], []
+    for record in queue:
+        mode = record.get("mode")
+        if mode == fetch.Fetcher.FETCH or mode == fetch.Fetcher.SPIDER_FETCH:
+            r = record.copy()
+            r["mode"] = fetch.Fetcher.FETCH
+            fetch_queue.append(r)
+        # if this isn't the last rule, defer remaining spidering to the
+        # next rule
+        if not lastrule:
+            if mode == fetch.Fetcher.SPIDER or mode == fetch.Fetcher.SPIDER_FETCH:
+                r = record.copy()
+                r["mode"] = fetch.Fetcher.SPIDER
+                spider_queue.append(r)
+    return fetch_queue, spider_queue
+
 def main(queue, rules, wb):
     outer_queue = queue
     for rule in rules:
@@ -159,18 +176,9 @@ def main(queue, rules, wb):
                 depth -= 1
             elif depth == 0: 
             # There may still be records in the queue, but since depth is reached
-            # no more spidering is allowed, so we remove the records
-                fs = [r for r in queue if r.get("mode") ==
-                      (fetch.Fetcher.FETCH or fetch.Fetcher.SPIDER_FETCH)]
-                ss = [r for r in queue if r.get("mode") ==\
-                      (fetch.Fetcher.SPIDER or fetch.Fetcher.SPIDER_FETCH)]
-                for r in fs: r["mode"] = fetch.Fetcher.FETCH
-                for r in ss: r["mode"] = fetch.Fetcher.SPIDER
-                # if this isn't the last rule, defer remaining spidering to the
-                # next iteration
-                if rules.index(rule) < len(rules)-1:
-                    outer_queue = ss
-                queue = fs
+            # no more spidering is allowed, so we allow one more iteration, but
+            # only for fetching
+                queue, outer_queue = split_queue(queue, rules.index(rule) == len(rules)-1)
 
             queue = process_records(queue, rule, wb)
 
