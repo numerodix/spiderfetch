@@ -175,7 +175,7 @@ if __name__ == "__main__":
     a("--dump", action="store_true", help="Dump all urls in web")
     a("--in", metavar="<url>", dest="into", help="Find incoming urls to <url>")
     a("--out", metavar="<url>", help="Find outgoing urls from <url>")
-    a("--aliases", metavar="<url>", help="Find other urls for the document at this <url>")
+    a("--aliases", metavar="<url>", help="Find other urls for the document at <url>")
     a("--multiple", action="store_true", help="Find documents with multiple urls")
     a("--trace", metavar="<url>", help="Trace path from root to <url>")
     a("--deepest", action="store_true", help="Trace url furthest from root")

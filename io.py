@@ -10,6 +10,42 @@ import sys
 import shcolor
 
 
+_help_header = "spiderfetch tool suite\n\n"
+
+_tools_help="""\
+== spiderfetch ==
+
+Spiders recursively for urls, starting from <url>. Driven either by <pattern>
+or <recipe>. Spidering can be paused/canceled at any time with Ctrl+C, which
+will attempt to save the current state in $host.{session,web}. Spidering can
+resume provided these two files are found. Terminates either by reaching the
+end of the recipe, or reaching the end of the spider queue (no more urls
+found). At this point the web is saved to $host.web.
+
+During execution, successful fetches are written to log_urls, failed fetches
+to error_urls, and outright errors (that shouldn't happen) to error_log.
+
+== web ==
+
+A query tool for webs that operates on .web files produced by spiderfetch.
+
+== fetch ==
+
+A general purpose fetcher for ftp/http/https, used by spiderfetch. Displays
+one url per line and error codes for common fetch errors.
+
+== spider ==
+
+A spider module for spidering urls in documents. Can be used standalone with a
+single url to test spidering capabilities and can also highlight matches in the
+document.
+
+== dumpstream ==
+
+An automation module for use with mplayer to record media streams. Reads urls
+from a file and records with mplayer.
+"""
+
 #LOGDIR = os.environ.get("LOGDIR") or "logs"
 LOGDIR = os.environ.get("LOGDIR") or "."
 
@@ -80,9 +116,14 @@ def deserialize(filename, dir=None):
         pass
     return o
 
+def init_opts(usage):
+    parser = optparse.OptionParser(add_help_option=None)
+    parser.usage = usage
+    return parser, parser.add_option
+
 def opts_help(option, opt_str, value, parser):
-    header = "spiderfetch tool suite\n\n"
-    write_err(header+"Usage:  %s %s\n\n" % (os.path.basename(sys.argv[0]), parser.usage))
+    write_err(_help_header+
+        "Usage:  %s %s\n\n" % (os.path.basename(sys.argv[0]), parser.usage))
     for o in parser.option_list:
         var = o.metavar or ""
         short = (o._short_opts and o._short_opts[0]) or ""
@@ -91,14 +132,14 @@ def opts_help(option, opt_str, value, parser):
         write_err("  %s %s\n" % (argument.strip().ljust(25), o.help))
     sys.exit(2)
 
-def init_opts(usage):
-    parser = optparse.OptionParser(add_help_option=None)
-    parser.usage = usage
-    return parser, parser.add_option
+def help_tools(option, opt_str, value, parser):
+    write_err(_help_header+_tools_help)
+    sys.exit(2)
 
 def parse_args(parser):
     a = parser.add_option
     a("-h", action="callback", callback=opts_help, help="Display this message")
+    a("--tools", action="callback", callback=help_tools, help="Descriptions of the tools")
     return parser.parse_args()
 
 
