@@ -86,6 +86,7 @@ class Fetcher(object):
     actionwidth = 6
     ratewidth = 10
     sizewidth = 10
+    urlwidth = linewidth - actionwidth - ratewidth - sizewidth - 7  # 7 for spaces
     units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB", 6: "EB"}
 
     def __init__(self, mode=FETCH, url=None, filename=None):
@@ -113,6 +114,7 @@ class Fetcher(object):
         self.started = False
 
     def set_referer(self, url):
+        """Some hosts block requests from referers off-site"""
         pair = ('Referer', urlrewrite.get_referer(url))
         found = False
         for (i, (name, key)) in enumerate(self._opener.addheaders):
@@ -127,6 +129,7 @@ class Fetcher(object):
 
     def set_url(self, url):
         self._url = url
+        self.url_fmt = urlrewrite.truncate_url(self.urlwidth, url).ljust(self.urlwidth)
         self.set_referer(url)
 
     url = property(fget=get_url, fset=set_url)
@@ -140,13 +143,6 @@ class Fetcher(object):
             io.savelog(line, "error_urls", "a")
         else:
             io.savelog(line, "log_urls", "a")
-
-    def truncate_url(self, width, s):
-        radius = (len(s) - width + 3) / 2
-        if radius > 0:
-            mid = len(s) / 2
-            s = s[0:mid-radius] + ".." + s[mid+radius:]
-        return s
 
     def format_size(self, size):
         if size == None:
@@ -174,6 +170,8 @@ class Fetcher(object):
             rate = "%s/s" % self.format_size(rate)
         rate = rate.ljust(self.ratewidth)
 
+        url = self.url_fmt
+
         if self.totalsize:
             size = self.format_size(self.totalsize)
         elif self.download_size:
@@ -181,10 +179,6 @@ class Fetcher(object):
         else:
             size = "????? B"
         size = ("  %s" % size).ljust(self.sizewidth)
-
-        line = "%s ::  %s  " % (action, rate)
-        url_w = self.linewidth - len(line) - self.sizewidth
-        url = self.truncate_url(url_w, self.url).ljust(url_w)
 
         # add formatting
         if error:
@@ -198,8 +192,8 @@ class Fetcher(object):
 
         # draw progress bar
         if not (error or prestart or complete) and self.totalsize:
-            c = int(url_w * self.download_size / self.totalsize)
-            url = shcolor.wrap_s(url, c, None, reverse=True)
+            c = int(self.urlwidth * self.download_size / self.totalsize)
+            url = shcolor.wrap_s(self.url_fmt, c, None, reverse=True)
 
         if not self.totalsize:
             size = shcolor.color(shcolor.YELLOW, size)

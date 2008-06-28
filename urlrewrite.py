@@ -41,6 +41,15 @@ def get_referer(url):
     path = os.path.dirname(path)
     return urlparse.urlunsplit((scheme, netloc, path, None, None))
 
+def truncate_url(width, s):
+    if len(s) > width:
+        filler = "..."
+        w = width - len(filler)
+        half = w / 2
+        rest = w % 2
+        s = s[:half+rest] + filler + s[-half:]
+    return s
+
 def rewrite_urls(origin_url, urls):
     origin_pack = urlparse.urlsplit(origin_url)
     for u in urls:
