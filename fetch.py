@@ -4,6 +4,7 @@ import ftplib
 import httplib
 import mimetools
 import os
+import re
 import socket
 import sys
 import time
@@ -43,6 +44,45 @@ class ChangedUrlWarning(Exception):
     def __init__(self, new_url):
         self.new_url = new_url
 
+class err(object):
+    def __init__(self):
+        self.dns = 1
+        self.timeout = 2
+        self.socket = 3
+        self.ssl = 4
+        self.auth = 5
+        self.url_error = 6
+        self.incomplete = 7
+        self.wrong_type = 8
+        self.no_data = 9
+        self.redirect = 10
+
+    def __getattr__(self, att):
+        """Disclaimer: Hackish
+        We accept lookup on any error declared in class definition, as well as
+        anything that matches 'ftp|http_[0-9]{3}'. Once found, we stick it in
+        the dict so that it can be found by str()."""
+        try:
+            return self.__dict__[att]
+        except KeyError:
+            m = re.search("^(ftp|http)_([0-9]{3})$", att)
+            if m and m.groups():
+                if m.group(1) == "ftp":
+                    val = 1000 + int(m.group(2))
+                if m.group(1) == "http":
+                    val = 2000 + int(m.group(2))
+                setattr(self, att, val)
+                return val
+            raise AttributeError
+
+    def str(self, att):
+        """Look up the name of an error in the object dict"""
+        for (k, v) in self.__dict__.items():
+            if att == v:
+                return k.replace("_", " ")
+        raise AttributeError
+
+err = err()     # XXX ugly, but it's messy enough to do this on an instance
 
 class MyURLopener(urllib.FancyURLopener):
     version = _user_agent
@@ -59,7 +99,7 @@ class MyURLopener(urllib.FancyURLopener):
             return urllib.FancyURLopener.http_error_default(\
                     self, url, fp, errcode, errmsg, headers)
 
-        self.fetcher.write_progress(error=str(errcode))
+        self.fetcher.handle_error(eval('err.http_'+str(errcode)))
         if errcode == 503:
             raise ServiceUnavailableError
         raise ErrorAlreadyProcessed
@@ -112,6 +152,7 @@ class Fetcher(object):
         self.totalsize = None
 
         self.started = False
+        self.error = None
 
     def set_referer(self, url):
         """Some hosts block requests from referers off-site"""
@@ -133,6 +174,10 @@ class Fetcher(object):
         self.set_referer(url)
 
     url = property(fget=get_url, fset=set_url)
+
+    def handle_error(self, e):
+        self.error = e
+        self.write_progress(error=err.str(e))
 
     def log_url(self, status, error=False):
         status = status.replace(" ", "_")
@@ -303,17 +348,20 @@ class Fetcher(object):
         """
 
         try:
+            # reset retries counter
             self.tries = os.environ.get("TRIES") or 2
+            # clear error
+            self.error = None
             self.load_url()
         except ChangedUrlWarning, e:
-            self.write_progress(error="redirect")
+            self.handle_error(err.redirect)
             raise
         except filetype.WrongFileTypeError:
-            self.write_progress(error="wrong type")
+            self.handle_error(err.wrong_type)
         except ZeroDataError:
-            self.write_progress(error="no data")
+            self.handle_error(err.no_data)
         except urllib.ContentTooShortError:
-            self.write_progress(error="incomplete")
+            self.handle_error(err.incomplete)
         except ErrorAlreadyProcessed:
             pass
         except IOError, exc:
@@ -321,24 +369,24 @@ class Fetcher(object):
                 if len(exc.args) == 2:
                     (_, errobj) = exc.args
                     if type(errobj) == socket.gaierror:
-                        self.write_progress(error="dns")
+                        self.handle_error(err.dns)
                         return
                     elif type(errobj) == socket.timeout:
-                        self.write_progress(error="timeout")
+                        self.handle_error(err.timeout)
                         return
                     elif type(errobj) == socket.sslerror:
-                        self.write_progress(error="ssl")
+                        self.handle_error(err.ssl)
                         return
                     elif type(errobj) == socket.error:
-                        self.write_progress(error="socket")
+                        self.handle_error(err.socket)
                         return
                     elif type(errobj) == ftplib.error_perm:
-                        self.write_progress(error="auth")
+                        self.handle_error(err.auth)
                         return
-            self.write_progress(error="url error")
+            self.handle_error(err.url_error)
             raise
         except socket.timeout:
-            self.write_progress(error="timeout")
+            self.handle_error(err.timeout)
         except KeyboardInterrupt:
             io.write_abort()
             raise
