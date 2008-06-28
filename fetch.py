@@ -49,18 +49,29 @@ class MyURLopener(urllib.FancyURLopener):
     def __init__(self, fetcher):
         urllib.FancyURLopener.__init__(self)
         self.fetcher = fetcher
+
+    def prompt_user_passwd(self, host, realm):
+        """Don't prompt for credentials"""
+        return None, None
     
+    def addheader(self, *args):
+        urllib.FancyURLopener.addheader(self, *args)
+
     def http_error_default(self, url, fp, errcode, errmsg, headers):
+        if os.environ.get("SILENT_REDIRECT"):
+            return urllib.FancyURLopener.http_error_default(\
+                    self, url, fp, errcode, errmsg, headers)
+
         self.fetcher.write_progress(error=str(errcode))
         if errcode == 503:
             raise ServiceUnavailableError
         raise ErrorAlreadyProcessed
 
-    def prompt_user_passwd(self, host, realm):
-        """Don't prompt for credentials"""
-        return None, None
-
     def redirect_internal(self, url, fp, errcode, errmsg, headers, data):
+        if os.environ.get("SILENT_REDIRECT"):
+            return urllib.FancyURLopener.redirect_internal(\
+                    self, url, fp, errcode, errmsg, headers, data)
+
         if 'location' in headers:
             newurl = headers['location']
         elif 'uri' in headers:
@@ -80,7 +91,7 @@ class Fetcher(object):
     sizewidth = 10
     units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB", 6: "EB"}
 
-    def __init__(self, mode=FETCH, url=None, filename=None, stdopener=False):
+    def __init__(self, mode=FETCH, url=None, filename=None):
 
         self.is_typechecked = False
         self.fetch_if_wrongtype = False
@@ -102,8 +113,8 @@ class Fetcher(object):
 
         self.started = False
         
-        if not stdopener:
-            urllib._urlopener = MyURLopener(self)
+        self._opener = MyURLopener(self)
+        urllib._urlopener = self._opener
 
     def log_url(self, status, error=False):
         status = status.replace(" ", "_")
@@ -330,11 +341,11 @@ if __name__ == "__main__":
     a("--spidertest", action="store_true", help="Test spider with url")
     (opts, args) = io.parse_args(parser)
     try:
-        urllib._urlopener = urllib.FancyURLopener()
         url = args[0]
+        os.environ["SILENT_REDIRECT"] = "1"
         if opts.spidertest:
             (fp, filename) = io.get_tempfile()
-            Fetcher(mode=Fetcher.SPIDER, url=url, filename=filename, stdopener=True).launch()
+            Fetcher(mode=Fetcher.SPIDER, url=url, filename=filename).launch()
             os.close(fp) ; os.unlink(filename)
         else:
             if len(args) > 1:
@@ -342,7 +353,7 @@ if __name__ == "__main__":
             else:
                 os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or "1"
                 filename = io.safe_filename(urlrewrite.url_to_filename(url))
-            Fetcher(mode=Fetcher.FETCH, url=url, filename=filename, stdopener=True).launch()
+            Fetcher(mode=Fetcher.FETCH, url=url, filename=filename).launch()
     except filetype.WrongFileTypeError:
         os.unlink(filename)
     except KeyboardInterrupt:
