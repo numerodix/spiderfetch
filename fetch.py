@@ -80,7 +80,7 @@ class Fetcher(object):
     sizewidth = 10
     units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB", 6: "EB"}
 
-    def __init__(self, mode=FETCH, url=None, filename=None):
+    def __init__(self, mode=FETCH, url=None, filename=None, stdopener=False):
 
         self.is_typechecked = False
         self.fetch_if_wrongtype = False
@@ -101,8 +101,9 @@ class Fetcher(object):
         self.totalsize = None
 
         self.started = False
-
-        urllib._urlopener = MyURLopener(self)
+        
+        if not stdopener:
+            urllib._urlopener = MyURLopener(self)
 
     def log_url(self, status, error=False):
         status = status.replace(" ", "_")
@@ -333,7 +334,7 @@ if __name__ == "__main__":
         url = args[0]
         if opts.spidertest:
             (fp, filename) = io.get_tempfile()
-            Fetcher(mode=Fetcher.SPIDER, url=url, filename=filename).launch()
+            Fetcher(mode=Fetcher.SPIDER, url=url, filename=filename, stdopener=True).launch()
             os.close(fp) ; os.unlink(filename)
         else:
             if len(args) > 1:
@@ -341,7 +342,7 @@ if __name__ == "__main__":
             else:
                 os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or "1"
                 filename = io.safe_filename(urlrewrite.url_to_filename(url))
-            Fetcher(mode=Fetcher.FETCH, url=url, filename=filename).launch()
+            Fetcher(mode=Fetcher.FETCH, url=url, filename=filename, stdopener=True).launch()
     except filetype.WrongFileTypeError:
         os.unlink(filename)
     except KeyboardInterrupt:
