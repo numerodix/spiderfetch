@@ -56,6 +56,8 @@ class err(object):
         self.no_data = 9
         self.redirect = 10
 
+        self.temporal = [self.timeout, self.socket, self.http_503]
+
     def __getattr__(self, att):
         """Disclaimer: Hackish
         We accept lookup on any error declared in class definition, as well as
@@ -80,6 +82,11 @@ class err(object):
             if att == v:
                 return k.replace("_", " ")
         raise AttributeError
+
+    def is_temporal(self, e):
+        """Some errors are temporal, retrying the fetch later could work"""
+        if e in self.temporal:
+            return True
 
 err = err()     # XXX ugly, but it's messy enough to do this on an instance
 

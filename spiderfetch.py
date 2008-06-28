@@ -71,12 +71,6 @@ def get_url(fetcher, wb, host_filter=False):
             fetcher.url = url
     return fetcher.url
 
-def reconsider_url(url, fetcher):
-    """Some errors are temporal, retrying the fetch later could work"""
-    es = [fetch.err.timeout, fetch.err.socket, fetch.err.http_503]
-    if fetcher.error in es:
-        return True
-
 def qualify_urls(ref_url, urls, rule, newqueue, wb):
     for url in urls:
         _dump, _fetch, _spider = False, False, False
@@ -121,7 +115,7 @@ def process_records(queue, rule, wb):
             url = get_url(f, wb, host_filter=rule.get("host_filter"))
 
             # consider retrying the fetch if it failed
-            if f.error and reconsider_url(url, f):
+            if f.error and fetch.err.is_temporal(f.error):
                 if not record.get("retry"):
                     record["retry"] = True
                     queue.append(record)
