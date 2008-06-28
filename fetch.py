@@ -39,7 +39,6 @@ class ErrorAlreadyProcessed(Exception): pass
 class ZeroDataError(Exception): pass
 class DuplicateUrlWarning(Exception): pass
 class UrlRedirectsOffHost(Exception): pass
-class ServiceUnavailableError(Exception): pass
 class ChangedUrlWarning(Exception):
     def __init__(self, new_url):
         self.new_url = new_url
@@ -100,8 +99,6 @@ class MyURLopener(urllib.FancyURLopener):
                     self, url, fp, errcode, errmsg, headers)
 
         self.fetcher.handle_error(eval('err.http_'+str(errcode)))
-        if errcode == 503:
-            raise ServiceUnavailableError
         raise ErrorAlreadyProcessed
 
     def redirect_internal(self, url, fp, errcode, errmsg, headers, data):
@@ -303,38 +300,30 @@ class Fetcher(object):
                 self.typecheck_urls(self.filename)
 
     def load_url(self):
-        while self.tries > 0:
-            self.tries -= 1
-            try:
-                self.write_progress(prestart=True)
+        self.write_progress(prestart=True)
 
-                (_, headers) = urllib.urlretrieve(self.url, filename=self.filename,
-                    reporthook=self.fetch_hook)
+        (_, headers) = urllib.urlretrieve(self.url, filename=self.filename,
+            reporthook=self.fetch_hook)
 
-                self.download_size = os.path.getsize(self.filename)
-                if not self.download_size:
-                    raise ZeroDataError
+        self.download_size = os.path.getsize(self.filename)
+        if not self.download_size:
+            raise ZeroDataError
 
-                """This was a check to detect zero data transmissions, but it
-                causes ftp indices to fail, so it may be worthless. Reading the
-                filesize might be more useful.
+        """This was a check to detect zero data transmissions, but it
+        causes ftp indices to fail, so it may be worthless. Reading the
+        filesize might be more useful.
 
-                if isinstance(headers, mimetools.Message) and headers.fp \
-                   and not headers.fp.read(1):
-                    raise ZeroDataError
-                """
+        if isinstance(headers, mimetools.Message) and headers.fp \
+           and not headers.fp.read(1):
+            raise ZeroDataError
+        """
 
-                if not self.is_typechecked:
-                    self.typecheck_html(self.filename)
-                if not self.is_typechecked:
-                    self.typecheck_urls(self.filename)
+        if not self.is_typechecked:
+            self.typecheck_html(self.filename)
+        if not self.is_typechecked:
+            self.typecheck_urls(self.filename)
 
-                self.write_progress(complete=True)
-                break
-            except ServiceUnavailableError:
-                # if more tries left then ignore error, else fall through
-                if self.tries <= 0:
-                    raise ErrorAlreadyProcessed
+        self.write_progress(complete=True)
 
     def launch(self):
 
@@ -348,10 +337,9 @@ class Fetcher(object):
         """
 
         try:
-            # reset retries counter
-            self.tries = os.environ.get("TRIES") or 2
             # clear error
             self.error = None
+
             self.load_url()
         except ChangedUrlWarning, e:
             self.handle_error(err.redirect)
