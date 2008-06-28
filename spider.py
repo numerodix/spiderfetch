@@ -74,8 +74,10 @@ def unbox_it_to_ss(it):
     for match in it:
         yield match.group('url')
 
-def group_by_regex(s):
-    its = [spider(s), harvest(s), spider_ftp(s)]
+def group_by_regex(s, url):
+    its = [spider(s), harvest(s)]
+    if urlrewrite.get_scheme(url) == "ftp":
+        its.append(spider_ftp(s))
     for (idx, it) in enumerate(its):
         for match in it: 
             yield (idx, match)
@@ -84,8 +86,8 @@ def unique(it):
     seen = set()
     return [x for x in it if x not in seen and not seen.add(x)]
 
-def colorize_shell(str):
-    it = group_by_regex(str)
+def colorize_shell(str, url):
+    it = group_by_regex(str, url)
 
     # (match_obj, regex_serial_id, color_id)
     it = itertools.imap(lambda (i, m): (m, i, shcolor.map(i)), it)
@@ -151,6 +153,6 @@ if __name__ == "__main__":
             for u in unique(unbox_it_to_ss(findall(data, url))):
                 print u
         else:
-            print colorize_shell(data)
+            print colorize_shell(data, url)
     except IndexError:
         io.opts_help(None, None, None, parser)
