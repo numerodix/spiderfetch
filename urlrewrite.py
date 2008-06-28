@@ -36,6 +36,11 @@ def get_scheme(url):
     pack = urlparse.urlsplit(url)
     return pack.scheme
 
+def get_referer(url):
+    (scheme, netloc, path, query, fragment) = urlparse.urlsplit(url)
+    path = os.path.dirname(path)
+    return urlparse.urlunsplit((scheme, netloc, path, None, None))
+
 def rewrite_urls(origin_url, urls):
     origin_pack = urlparse.urlsplit(origin_url)
     for u in urls:

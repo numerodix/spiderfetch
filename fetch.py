@@ -25,7 +25,7 @@ http://fc02.deviantart.com/fs11/i/2006/171/b/1/atomic_by_numerodix.jpg
 """
 
 # this should open some doors for us (IE7/Vista)
-user_agent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"
+_user_agent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"
 
 # don't wait forever
 timeout = 10
@@ -45,7 +45,7 @@ class ChangedUrlWarning(Exception):
 
 
 class MyURLopener(urllib.FancyURLopener):
-    version = user_agent
+    version = _user_agent
     def __init__(self, fetcher):
         urllib.FancyURLopener.__init__(self)
         self.fetcher = fetcher
@@ -54,9 +54,6 @@ class MyURLopener(urllib.FancyURLopener):
         """Don't prompt for credentials"""
         return None, None
     
-    def addheader(self, *args):
-        urllib.FancyURLopener.addheader(self, *args)
-
     def http_error_default(self, url, fp, errcode, errmsg, headers):
         if os.environ.get("SILENT_REDIRECT"):
             return urllib.FancyURLopener.http_error_default(\
@@ -92,6 +89,8 @@ class Fetcher(object):
     units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB", 6: "EB"}
 
     def __init__(self, mode=FETCH, url=None, filename=None):
+        self._opener = MyURLopener(self)
+        urllib._urlopener = self._opener
 
         self.is_typechecked = False
         self.fetch_if_wrongtype = False
@@ -112,9 +111,25 @@ class Fetcher(object):
         self.totalsize = None
 
         self.started = False
-        
-        self._opener = MyURLopener(self)
-        urllib._urlopener = self._opener
+
+    def set_referer(self, url):
+        pair = ('Referer', urlrewrite.get_referer(url))
+        found = False
+        for (i, (name, key)) in enumerate(self._opener.addheaders):
+            if name == "Referer":
+                found = True
+                self._opener.addheaders[i] = pair
+        if not found:
+            self._opener.addheaders.append(pair)
+
+    def get_url(self):
+        return self._url
+
+    def set_url(self, url):
+        self._url = url
+        self.set_referer(url)
+
+    url = property(fget=get_url, fset=set_url)
 
     def log_url(self, status, error=False):
         status = status.replace(" ", "_")
