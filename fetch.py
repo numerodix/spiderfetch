@@ -33,6 +33,8 @@ if os.environ.get("SOCKET_TIMEOUT"):
     timeout = int(os.environ.get("SOCKET_TIMEOUT"))
 socket.setdefaulttimeout(timeout)
 
+CHECKSUM_SIZE = 10*1024
+
 
 class ErrorAlreadyProcessed(Exception): pass
 class ZeroDataError(Exception): pass
@@ -126,7 +128,7 @@ class Myftpwrapper(urllib.ftpwrapper):
 
 class MyURLopener(urllib.FancyURLopener):
     version = _user_agent
-    checksum_size = 10*1024
+    checksum_size = CHECKSUM_SIZE
 
     def __init__(self, fetcher):
         urllib.FancyURLopener.__init__(self)
