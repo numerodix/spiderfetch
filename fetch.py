@@ -2,7 +2,6 @@
 
 import ftplib
 import httplib
-import mimetools
 import os
 import re
 import socket
@@ -39,6 +38,7 @@ class ErrorAlreadyProcessed(Exception): pass
 class ZeroDataError(Exception): pass
 class DuplicateUrlWarning(Exception): pass
 class UrlRedirectsOffHost(Exception): pass
+class ResumeChecksumFailed(Exception): pass
 class ChangedUrlWarning(Exception):
     def __init__(self, new_url):
         self.new_url = new_url
@@ -55,6 +55,7 @@ class err(object):
         self.wrong_type = 8
         self.no_data = 9
         self.redirect = 10
+        self.checksum = 11
 
         self.temporal = [self.timeout, self.socket, self.http_503]
 
@@ -90,8 +91,43 @@ class err(object):
 
 err = err()     # XXX ugly, but it's messy enough to do this on an instance
 
+# Override ftpwrapper from urllib to change ntransfercmd call, now using 'rest'
+class Myftpwrapper(urllib.ftpwrapper):
+    def retrfile(self, file, type, rest=None):
+        import ftplib
+        self.endtransfer()
+        if type in ('d', 'D'): cmd = 'TYPE A'; isdir = 1
+        else: cmd = 'TYPE ' + type; isdir = 0
+        try:
+            self.ftp.voidcmd(cmd)
+        except ftplib.all_errors:
+            self.init()
+            self.ftp.voidcmd(cmd)
+        conn = None
+        if file and not isdir:
+            # Try to retrieve as a file
+            try:
+                cmd = 'RETR ' + file
+                conn = self.ftp.ntransfercmd(cmd, rest=rest)
+            except ftplib.error_perm, reason:
+                if str(reason)[:3] != '550':
+                    raise IOError, ('ftp error', reason), sys.exc_info()[2]
+        if not conn:
+            # Set transfer mode to ASCII!
+            self.ftp.voidcmd('TYPE A')
+            # Try a directory listing
+            if file: cmd = 'LIST ' + file
+            else: cmd = 'LIST'
+            conn = self.ftp.ntransfercmd(cmd)
+        self.busy = 1
+        # Pass back both a suitably decorated object and a retrieval length
+        return (urllib.addclosehook(conn[0].makefile('rb'),
+                             self.endtransfer), conn[1])
+
 class MyURLopener(urllib.FancyURLopener):
     version = _user_agent
+    checksum_size = 100
+
     def __init__(self, fetcher):
         urllib.FancyURLopener.__init__(self)
         self.fetcher = fetcher
@@ -121,10 +157,161 @@ class MyURLopener(urllib.FancyURLopener):
         newurl = urlparse.urljoin(self.fetcher.url, newurl)
         raise ChangedUrlWarning(newurl)
 
+    def set_header(self, pair):
+        (key, value) = pair
+        found = False
+        for (i, (k, v)) in enumerate(self.addheaders):
+            if key == k:
+                found = True
+                self.addheaders[i] = pair
+        if not found:
+            self.addheaders.append(pair)
+
+    def continue_file(self, filename):
+        localsize = os.path.getsize(filename)
+        if localsize < self.checksum_size:
+            self.checksum_size = localsize
+        seekto = localsize - self.checksum_size
+        os.environ["REST"] = str(seekto)
+        self.set_header(('Range', 'bytes=%s-' % seekto))
+        return localsize
+
+    def retrieve(self, url, filename, reporthook=None, data=None, cont=None):
+        """retrieve(url) returns (filename, headers) for a local object
+        or (tempfilename, headers) for a remote object."""
+        url = urllib.unwrap(urllib.toBytes(url))
+        if self.tempcache and url in self.tempcache:
+            return self.tempcache[url]
+        type, url1 = urllib.splittype(url)
+        if filename is None and (not type or type == 'file'):
+            try:
+                fp = self.open_local_file(url1)
+                hdrs = fp.info()
+                del fp
+                return urllib.url2pathname(urllib.splithost(url1)[1]), hdrs
+            except IOError, msg:
+                pass
+        bs = 1024*8
+        size = -1
+        read = 0
+        blocknum = 0
+        if cont:
+            localsize = self.continue_file(filename)
+            read = localsize
+            blocknum = localsize / bs
+        fp = self.open(url, data)
+        headers = fp.info()
+        if cont:
+            tfp = open(filename, 'rb+')
+            tfp.seek(-self.checksum_size, os.SEEK_END)
+            local = tfp.read(self.checksum_size)
+            remote = fp.read(self.checksum_size)
+            if not local == remote:
+                raise ResumeChecksumFailed
+        else:
+            tfp = open(filename, 'wb')
+        result = filename, headers
+        if self.tempcache is not None:
+            self.tempcache[url] = result
+        if reporthook:
+            if "content-length" in headers:
+                size = int(headers["Content-Length"])
+                if cont and self.fetcher.proto == self.fetcher.PROTO_HTTP:
+                    print "\nsize", size
+                    size = size + localsize - self.checksum_size
+            reporthook(blocknum, bs, size)
+        while 1:
+            block = fp.read(bs)
+            if block == "":
+                break
+            read += len(block)
+            tfp.write(block)
+            blocknum += 1
+            if reporthook:
+                reporthook(blocknum, bs, size)
+        fp.close()
+        tfp.close()
+        del fp
+        del tfp
+
+        # raise exception if actual size does not match content-length header
+        if size >= 0 and read < size:
+            raise urllib.ContentTooShortError("retrieval incomplete: got only %i out "
+                                       "of %i bytes" % (read, size), result)
+
+        return result
+
+    # Override function from urllib to use custom frpwrapper
+    def open_ftp(self, url):
+        """Use FTP protocol."""
+        if not isinstance(url, str):
+            raise IOError, ('ftp error', 'proxy support for ftp protocol currently not implemented')
+        import mimetypes, mimetools
+        try:
+            from cStringIO import StringIO
+        except ImportError:
+            from StringIO import StringIO
+        host, path = urllib.splithost(url)
+        if not host: raise IOError, ('ftp error', 'no host given')
+        host, port = urllib.splitport(host)
+        user, host = urllib.splituser(host)
+        if user: user, passwd = urllib.splitpasswd(user)
+        else: passwd = None
+        host = urllib.unquote(host)
+        user = urllib.unquote(user or '')
+        passwd = urllib.unquote(passwd or '')
+        host = socket.gethostbyname(host)
+        if not port:
+            import ftplib
+            port = ftplib.FTP_PORT
+        else:
+            port = int(port)
+        path, attrs = urllib.splitattr(path)
+        path = urllib.unquote(path)
+        dirs = path.split('/')
+        dirs, file = dirs[:-1], dirs[-1]
+        if dirs and not dirs[0]: dirs = dirs[1:]
+        if dirs and not dirs[0]: dirs[0] = '/'
+        key = user, host, port, '/'.join(dirs)
+        # XXX thread unsafe!
+        if len(self.ftpcache) > urllib.MAXFTPCACHE:
+            # Prune the cache, rather arbitrarily
+            for k in self.ftpcache.keys():
+                if k != key:
+                    v = self.ftpcache[k]
+                    del self.ftpcache[k]
+                    v.close()
+        try:
+            if not key in self.ftpcache:
+                self.ftpcache[key] = \
+                    Myftpwrapper(user, passwd, host, port, dirs)
+            if not file: type = 'D'
+            else: type = 'I'
+            for attr in attrs:
+                attr, value = urllib.splitvalue(attr)
+                if attr.lower() == 'type' and \
+                   value in ('a', 'A', 'i', 'I', 'd', 'D'):
+                    type = value.upper()
+            (fp, retrlen) = self.ftpcache[key].retrfile(file, type, 
+                                                rest=os.environ.get("REST"))
+            mtype = mimetypes.guess_type("ftp:" + url)[0]
+            headers = ""
+            if mtype:
+                headers += "Content-Type: %s\n" % mtype
+            if retrlen is not None and retrlen >= 0:
+                headers += "Content-Length: %d\n" % retrlen
+            headers = mimetools.Message(StringIO(headers))
+            return urllib.addinfourl(fp, headers, "ftp:" + url)
+        except urllib.ftperrors(), msg:
+            raise IOError, ('ftp error', msg), sys.exc_info()[2]
+
 class Fetcher(object):
     FETCH = 1
     SPIDER = 2
     SPIDER_FETCH = 3
+
+    PROTO_FTP = 1
+    PROTO_HTTP = 2
 
     linewidth = 78
     actionwidth = 6
@@ -148,6 +335,7 @@ class Fetcher(object):
             self.action = "spider"
             self.fetch_if_wrongtype = True
 
+        self.proto = None
         self.url = url
         self.filename = filename
 
@@ -160,14 +348,7 @@ class Fetcher(object):
 
     def set_referer(self, url):
         """Some hosts block requests from referers off-site"""
-        pair = ('Referer', urlrewrite.get_referer(url))
-        found = False
-        for (i, (name, key)) in enumerate(self._opener.addheaders):
-            if name == "Referer":
-                found = True
-                self._opener.addheaders[i] = pair
-        if not found:
-            self._opener.addheaders.append(pair)
+        self._opener.set_header(('Referer', urlrewrite.get_referer(url)))
 
     def get_url(self):
         return self._url
@@ -175,6 +356,11 @@ class Fetcher(object):
     def set_url(self, url):
         self._url = url
         self.url_fmt = urlrewrite.truncate_url(self.urlwidth, url).ljust(self.urlwidth)
+        proto = urlrewrite.get_scheme(url)
+        if proto == "ftp":
+            self.proto = self.PROTO_FTP
+        elif proto == "http" or "https":
+            self.proto = self.PROTO_HTTP
         self.set_referer(url)
 
     url = property(fget=get_url, fset=set_url)
@@ -284,11 +470,6 @@ class Fetcher(object):
     def fetch_hook(self, blocknum, blocksize, totalsize):
         self.download_size = blocknum * blocksize
 
-        if blocknum == 0:
-            self.timestamp = time.time()
-        if blocknum == 1:
-            self.started = True
-
         step = 5
         if blocknum > 0 and blocknum % step == 0:
             t = time.time()
@@ -306,11 +487,26 @@ class Fetcher(object):
             if self.download_size >= filetype.HEADER_SIZE_URLS:
                 self.typecheck_urls(self.filename)
 
+    def inner_load_url(self):
+        cont = False
+        filename = self.filename
+        if os.environ.get("CONT") and os.path.exists(filename):
+            cont = True
+        else:
+            filename = io.safe_filename(self.filename)
+
+        # init vars here as we might start fetching from a non-zero position
+        self.timestamp = time.time()
+        self.started = True
+
+        (_, headers) = self._opener.retrieve(self.url, filename,
+            reporthook=self.fetch_hook, cont=cont)
+        
+
     def load_url(self):
         self.write_progress(prestart=True)
 
-        (_, headers) = urllib.urlretrieve(self.url, filename=self.filename,
-            reporthook=self.fetch_hook)
+        self.inner_load_url()
 
         self.download_size = os.path.getsize(self.filename)
         if not self.download_size:
@@ -357,6 +553,8 @@ class Fetcher(object):
             self.handle_error(err.no_data)
         except urllib.ContentTooShortError:
             self.handle_error(err.incomplete)
+        except ResumeChecksumFailed:
+            self.handle_error(err.checksum)
         except ErrorAlreadyProcessed:
             pass
         except IOError, exc:
@@ -404,7 +602,7 @@ if __name__ == "__main__":
                 filename = args[1]
             else:
                 os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or "1"
-                filename = io.safe_filename(urlrewrite.url_to_filename(url))
+                filename = urlrewrite.url_to_filename(url)
             Fetcher(mode=Fetcher.FETCH, url=url, filename=filename).launch()
     except filetype.WrongFileTypeError:
         os.unlink(filename)
