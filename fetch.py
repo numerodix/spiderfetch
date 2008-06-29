@@ -174,8 +174,13 @@ class MyURLopener(urllib.FancyURLopener):
         if localsize < self.checksum_size:
             self.checksum_size = localsize
         seekto = localsize - self.checksum_size
+
+        # set var read in open_ftp()
         os.environ["REST"] = str(seekto)
+
+        # set header for http
         self.set_header(('Range', 'bytes=%s-' % seekto))
+
         return localsize
 
     # Override function from urllib to support resuming transfers
@@ -589,7 +594,7 @@ class Fetcher(object):
 
 
 if __name__ == "__main__":
-    (parser, a) = io.init_opts("<url> [<file>] [options]")
+    (parser, a) = io.init_opts("<url>+ [options]")
     a("--spidertest", action="store_true", help="Test spider with url")
     (opts, args) = io.parse_args(parser)
     try:
@@ -600,12 +605,16 @@ if __name__ == "__main__":
             Fetcher(mode=Fetcher.SPIDER, url=url, filename=filename).launch()
             os.close(fp) ; os.unlink(filename)
         else:
-            if len(args) > 1:
-                filename = args[1]
-            else:
-                os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or "1"
+            args = list(args)
+            args.reverse()
+            os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or "1"
+            while args:
+                url = args.pop()
                 filename = urlrewrite.url_to_filename(url)
-            Fetcher(mode=Fetcher.FETCH, url=url, filename=filename).launch()
+                try:
+                    Fetcher(mode=Fetcher.FETCH, url=url, filename=filename).launch()
+                except Exception, e:
+                    print e
     except filetype.WrongFileTypeError:
         os.unlink(filename)
     except KeyboardInterrupt:
