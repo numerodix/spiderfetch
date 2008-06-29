@@ -333,6 +333,7 @@ class Fetcher(object):
 
         self.is_typechecked = False
         self.fetch_if_wrongtype = False
+        self.mode = mode
         if mode == self.FETCH:
             self.action = "fetch"
             self.is_typechecked = True
@@ -497,10 +498,11 @@ class Fetcher(object):
     def inner_load_url(self):
         cont = False
         filename = self.filename
-        if os.environ.get("CONT") and os.path.exists(filename):
-            cont = True
-        else:
-            filename = io.safe_filename(self.filename)
+        if not self.mode == self.SPIDER:
+            if os.environ.get("CONT") and os.path.exists(filename):
+                cont = True
+            else:
+                filename = io.safe_filename(self.filename)
 
         # init vars here as we might start fetching from a non-zero position
         self.timestamp = time.time()
