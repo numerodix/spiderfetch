@@ -126,7 +126,7 @@ class Myftpwrapper(urllib.ftpwrapper):
 
 class MyURLopener(urllib.FancyURLopener):
     version = _user_agent
-    checksum_size = 100
+    checksum_size = 10*1024
 
     def __init__(self, fetcher):
         urllib.FancyURLopener.__init__(self)
@@ -176,6 +176,7 @@ class MyURLopener(urllib.FancyURLopener):
         self.set_header(('Range', 'bytes=%s-' % seekto))
         return localsize
 
+    # Override function from urllib to support resuming transfers
     def retrieve(self, url, filename, reporthook=None, data=None, cont=None):
         """retrieve(url) returns (filename, headers) for a local object
         or (tempfilename, headers) for a remote object."""
@@ -217,7 +218,6 @@ class MyURLopener(urllib.FancyURLopener):
             if "content-length" in headers:
                 size = int(headers["Content-Length"])
                 if cont and self.fetcher.proto == self.fetcher.PROTO_HTTP:
-                    print "\nsize", size
                     size = size + localsize - self.checksum_size
             reporthook(blocknum, bs, size)
         while 1:
