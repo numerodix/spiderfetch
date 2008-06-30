@@ -597,6 +597,8 @@ class Fetcher(object):
 
 if __name__ == "__main__":
     (parser, a) = io.init_opts("<url>+ [options]")
+    a("--fullpath", action="store_true",
+      help="Use full path as filename to avoid name collisions")
     a("--spidertest", action="store_true", help="Test spider with url")
     (opts, args) = io.parse_args(parser)
     try:
@@ -609,7 +611,8 @@ if __name__ == "__main__":
         else:
             args = list(args)
             args.reverse()
-            os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or "1"
+            if opts.fullpath:
+                os.environ["ORIG_FILENAMES"] = "0"
             while args:
                 url = args.pop()
                 filename = urlrewrite.url_to_filename(url)
