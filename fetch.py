@@ -504,7 +504,8 @@ class Fetcher(object):
         cont = False
         filename = self.filename
         if not self.mode == self.SPIDER:
-            if os.environ.get("CONT") and os.path.exists(filename):
+            if (os.environ.get("CONT") and os.path.exists(filename) and
+                os.path.getsize(filename) > 0):
                 cont = True
             else:
                 filename = io.safe_filename(self.filename)
