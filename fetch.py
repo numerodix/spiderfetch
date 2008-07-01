@@ -41,6 +41,7 @@ class ZeroDataError(Exception): pass
 class DuplicateUrlWarning(Exception): pass
 class UrlRedirectsOffHost(Exception): pass
 class ResumeChecksumFailed(Exception): pass
+class ResumeNotSupported(Exception): pass
 class ChangedUrlWarning(Exception):
     def __init__(self, new_url):
         self.new_url = new_url
@@ -58,6 +59,7 @@ class err(object):
         self.no_data = 9
         self.redirect = 10
         self.checksum = 11
+        self.no_resume = 12
 
         self.temporal = [self.timeout, self.socket, self.http_503]
 
@@ -210,6 +212,9 @@ class MyURLopener(urllib.FancyURLopener):
         fp = self.open(url, data)
         headers = fp.info()
         if cont:
+            if not (headers.dict.get("content-range") or
+                    headers.dict.get("Content-Range")):
+                raise ResumeNotSupported
             tfp = open(filename, 'rb+')
             tfp.seek(-self.checksum_size, os.SEEK_END)
             local = tfp.read(self.checksum_size)
@@ -564,6 +569,8 @@ class Fetcher(object):
             self.handle_error(err.incomplete)
         except ResumeChecksumFailed:
             self.handle_error(err.checksum)
+        except ResumeNotSupported:
+            self.handle_error(err.no_resume)
         except ErrorAlreadyProcessed:
             pass
         except IOError, exc:
