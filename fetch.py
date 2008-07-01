@@ -502,19 +502,18 @@ class Fetcher(object):
 
     def inner_load_url(self):
         cont = False
-        filename = self.filename
         if not self.mode == self.SPIDER:
-            if (os.environ.get("CONT") and os.path.exists(filename) and
-                os.path.getsize(filename) > 0):
+            if (os.environ.get("CONT") and os.path.exists(self.filename) and
+                os.path.getsize(self.filename) > 0):
                 cont = True
             else:
-                filename = io.safe_filename(self.filename)
+                self.filename = io.safe_filename(self.filename)
 
         # init vars here as we might start fetching from a non-zero position
         self.timestamp = time.time()
         self.started = True
 
-        (_, headers) = self._opener.retrieve(self.url, filename,
+        (_, headers) = self._opener.retrieve(self.url, self.filename,
             reporthook=self.fetch_hook, cont=cont)
         
 
