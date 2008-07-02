@@ -24,6 +24,8 @@ testcases = """\
 host/path">
 <a href="http://12
  host/path">
+<a href=13file.path>
+<a href= 14file.pat h >
 """
 
 _link = """(?ims)<\s*a[^>]+href[ ]*=?[ ]*(?P<quot>["'`])(?P<url>.*?)(?P=quot)[^>]*?>"""
@@ -51,6 +53,7 @@ URI_MATCH = re.compile(_uri_match)
 _ftp_listing = """.[^ ]{9}(?:\s+[^ ]+){7}\s+(?P<url>.*)$"""
 FTP_LISTING = re.compile(_ftp_listing)
 
+
 def find_with_r(r, s):
     return re.finditer(r, s)
 
@@ -71,9 +74,9 @@ def spider(s):
 def harvest(s):
     return find_with_r(URI_MATCH, s)
 
-def findall(s, url):
+def findall(s, url=None):
     its = [spider(s), harvest(s)]
-    if urlrewrite.get_scheme(url) == "ftp":
+    if url and urlrewrite.get_scheme(url) == "ftp":
         its.append(spider_ftp(s))
     for (idx, it) in enumerate(its):
         for match in it: 
@@ -83,9 +86,9 @@ def unbox_it_to_ss(it):
     for match in it:
         yield match.group('url')
 
-def group_by_regex(s, url):
+def group_by_regex(s, url=None):
     its = [spider(s), harvest(s)]
-    if urlrewrite.get_scheme(url) == "ftp":
+    if url and urlrewrite.get_scheme(url) == "ftp":
         its.append(spider_ftp(s))
     for (idx, it) in enumerate(its):
         for match in it: 
@@ -95,7 +98,7 @@ def unique(it):
     seen = set()
     return [x for x in it if x not in seen and not seen.add(x)]
 
-def colorize_shell(str, url):
+def colorize_shell(str, url=None):
     it = group_by_regex(str, url)
 
     # (match_obj, regex_serial_id, color_id)
@@ -152,6 +155,7 @@ if __name__ == "__main__":
     a("--test", action="store_true", help="Run spider testsuite")
     (opts, args) = io.parse_args(parser)
     try:
+        url = None
         if opts.test:
             data = testcases
         else:
