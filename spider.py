@@ -29,11 +29,20 @@ host/path">
 _link = """(?ims)<\s*a[^>]+href[ ]*=?[ ]*(?P<quot>["'`])(?P<url>.*?)(?P=quot)[^>]*?>"""
 LINK = re.compile(_link)
 
+_link_unq = """(?ims)<\s*a[^>]+href=[ ]*(?P<url>[^'">]+?)[ ]*>"""
+LINK_UNQ = re.compile(_link_unq)
+
 _frame = """(?ims)<\s*i?frame[^>]+src[ ]*=?[ ]*(?P<quot>["'`])(?P<url>.*?)(?P=quot)[^>]*?>"""
 FRAME = re.compile(_frame)
 
+_frame_unq = """(?ims)<\s*i?frame[^>]+src=[ ]*(?P<url>[^'">]+?)[ ]*>"""
+FRAME_UNQ = re.compile(_frame_unq)
+
 _img = """(?ims)<\s*img[^>]+src[ ]*=?[ ]*(?P<quot>["'`])(?P<url>.*?)(?P=quot)[^>]*?>"""
 IMG = re.compile(_img)
+
+_img_unq = """(?ims)<\s*img[^>]+src=[ ]*(?P<url>[^'">]+?)[ ]*?>"""
+IMG_UNQ = re.compile(_img_unq)
 
 _uri_match = """(?ims)(?P<url>[a-z][a-z0-9+.-]{1,120}:\/\/(([a-z0-9$_.+!*,;\/?:@&~(){}\[\]=-])|%[a-f0-9]{2}){1,333}([a-z0-9][a-z0-9 $_.+!*,;\/?:@&~(){}\[\]=%-]{0,1000})?)"""
 URI_MATCH = re.compile(_uri_match)
@@ -55,7 +64,7 @@ def spider_ftp(s):
             yield match
 
 def spider(s):
-    for it in [find_with_r(r, s) for r in (LINK, FRAME, IMG)]:
+    for it in [find_with_r(r, s) for r in (LINK, LINK_UNQ, FRAME, FRAME_UNQ, IMG, IMG_UNQ)]:
         for match in it:
             yield match
 

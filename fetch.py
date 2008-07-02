@@ -618,6 +618,7 @@ if __name__ == "__main__":
         else:
             args = list(args)
             args.reverse()
+            os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or "1"
             if opts.fullpath:
                 os.environ["ORIG_FILENAMES"] = "0"
             while args:
