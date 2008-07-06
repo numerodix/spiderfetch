@@ -191,7 +191,7 @@ def main(queue, rules, wb):
 
 
 if __name__ == "__main__":
-    (parser, a) = io.init_opts("<url> [<pattern>] [options]")
+    (parser, a) = io.init_opts("<url> ['<pattern>'] [options]")
     a("--recipe", metavar="<recipe>", dest="recipe", help="Use a spidering recipe")
     a("--fetch", action="store_true", help="Fetch urls, don't dump")
     a("--dump", action="store_true", help="Dump urls, don't fetch")
