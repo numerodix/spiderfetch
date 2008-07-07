@@ -212,8 +212,9 @@ class MyURLopener(urllib.FancyURLopener):
         fp = self.open(url, data)
         headers = fp.info()
         if cont:
-            if not (headers.dict.get("content-range") or
-                    headers.dict.get("Content-Range")):
+            if (self.fetcher.proto == self.fetcher.PROTO_HTTP and
+                not (headers.dict.get("content-range") or
+                    headers.dict.get("Content-Range"))):
                 raise ResumeNotSupported
             tfp = open(filename, 'rb+')
             tfp.seek(-self.checksum_size, os.SEEK_END)
