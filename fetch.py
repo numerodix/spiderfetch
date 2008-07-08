@@ -35,6 +35,7 @@ socket.setdefaulttimeout(timeout)
 
 CHECKSUM_SIZE = 10*1024
 
+RETRY_WAIT = 10
 
 class ErrorAlreadyProcessed(Exception): pass
 class ZeroDataError(Exception): pass
@@ -349,6 +350,11 @@ class Fetcher(object):
             self.action = "spider"
             self.fetch_if_wrongtype = True
 
+        self.tries = 1
+        if os.environ.get("TRIES"):
+            self.tries = int(os.environ.get("TRIES"))
+        self.retry_wait = RETRY_WAIT
+
         self.proto = None
         self.url = url
         self.filename = filename
@@ -405,7 +411,7 @@ class Fetcher(object):
         u = "%s" % self.units[c]
         return r.rjust(5) + " " + u.ljust(2)
 
-    def write_progress(self, rate=None, prestart=None, complete=False, error=None):
+    def write_progress(self, rate=None, prestart=None, wait=None, complete=False, error=None):
         # compute string lengths
         action = self.action.rjust(self.actionwidth)
 
@@ -413,6 +419,8 @@ class Fetcher(object):
             rate = error
         elif prestart:
             rate = "starting"
+        elif wait:
+            rate = ("%s" % self.retry_wait) + "s..."
         elif complete:
             rate = "done"
         else:
@@ -432,7 +440,7 @@ class Fetcher(object):
         # add formatting
         if error:
             rate = shcolor.color(shcolor.RED, rate)
-        elif prestart:
+        elif prestart or wait:
             rate = shcolor.color(shcolor.CYAN, rate)
         elif complete:
             rate = shcolor.color(shcolor.GREEN, rate)
@@ -507,8 +515,7 @@ class Fetcher(object):
             if (os.environ.get("CONT") and os.path.exists(self.filename) and
                 os.path.getsize(self.filename) > 0):
                 cont = True
-            else:
-                self.filename = io.safe_filename(self.filename)
+
         # init vars here as we might start fetching from a non-zero position
         self.timestamp = time.time()
         self.started = True
@@ -600,20 +607,44 @@ class Fetcher(object):
             io.write_abort()
             raise
 
+    def launch_w_tries(self):
+        while True:
+            self.tries -= 1
+
+            self.launch()
+
+            if not self.error or not err.is_temporal(self.error):
+                return
+
+            if self.tries < 1:
+                return
+
+            # retry after a short delay
+            self.write_progress(wait=True)
+            time.sleep(self.retry_wait)  
+
 
 
 if __name__ == "__main__":
     (parser, a) = io.init_opts("<url>+ [options]")
     a("--fullpath", action="store_true",
       help="Use full path as filename to avoid name collisions")
+    a("-c", "--continue", dest="cont", action="store_true", help="Resume downloads")
+    a("-t", "--tries", dest="tries", type="int", action="store", help="Number of retries")
     a("--spidertest", action="store_true", help="Test spider with url")
     (opts, args) = io.parse_args(parser)
+    if getattr(opts, 'cont', None):
+        os.environ["CONT"] = "1"
+    if getattr(opts, 'tries', None):
+        if not os.environ.get("TRIES"):
+            os.environ["TRIES"] = str(opts.tries)
     try:
         url = args[0]
         os.environ["SILENT_REDIRECT"] = "1"
         if opts.spidertest:
             (fp, filename) = io.get_tempfile()
-            Fetcher(mode=Fetcher.SPIDER, url=url, filename=filename).launch()
+            Fetcher(mode=Fetcher.SPIDER, url=url,
+                    filename=filename).launch_w_tries()
             os.close(fp) ; os.unlink(filename)
         else:
             args = list(args)
@@ -623,9 +654,10 @@ if __name__ == "__main__":
                 os.environ["ORIG_FILENAMES"] = "0"
             while args:
                 url = args.pop()
-                filename = urlrewrite.url_to_filename(url)
+                filename = io.safe_filename(urlrewrite.url_to_filename(url))
                 try:
-                    Fetcher(mode=Fetcher.FETCH, url=url, filename=filename).launch()
+                    Fetcher(mode=Fetcher.FETCH, url=url,
+                            filename=filename).launch_w_tries()
                 except Exception, e:
                     print e
     except filetype.WrongFileTypeError:

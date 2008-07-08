@@ -48,7 +48,7 @@ from a file and records with mplayer.
 
 _help_vars="""\
 SOCKET_TIMEOUT   Seconds to wait before calling a socket timeout.
-TRIES            Number of tries on 503 Service Unavailable.
+TRIES            Number of tries on timeout errors.
 
 ORIG_FILENAMES   Save files with their original filenames on the host (1) or
   use filenames generated from the full url to avoid name collisions (0).
@@ -157,14 +157,10 @@ def help_vars(option, opt_str, value, parser):
 
 def parse_args(parser):
     a = parser.add_option
-    if os.path.basename(sys.argv[0]) in ['fetch.py']:
-        a("-c", "--continue", dest="cont", action="store_true", help="Resume downloads")
     a("-h", action="callback", callback=opts_help, help="Display this message")
     a("--tools", action="callback", callback=help_tools, help="Descriptions of the tools")
     a("--vars", action="callback", callback=help_vars, help="Environmental variables")
     (opts, args) = parser.parse_args()
-    if getattr(opts, 'cont', None):
-        os.environ["CONT"] = "1"
     return opts, args
 
 
