@@ -113,6 +113,7 @@ def process_records(queue, rule, wb):
             (fp, filename) = io.get_tempfile()
             f = fetch.Fetcher(mode=record.get("mode"), url=url, filename=filename)
             url = get_url(f, wb, host_filter=rule.get("host_filter"))
+            filename = f.filename
 
             # consider retrying the fetch if it failed
             if f.error and fetch.err.is_temporal(f.error):

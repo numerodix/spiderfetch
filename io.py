@@ -86,7 +86,9 @@ def safe_filename(filename, dir=None):
         while os.path.exists(filename):
             serial += 1
             filename = os.path.join(path, root + "-" + str(serial) + ext)
-    return os.path.basename(filename)
+    if dir:
+        filename = os.path.basename(filename)
+    return filename
 
 def create_dir(dir):
     if not os.path.exists(dir):

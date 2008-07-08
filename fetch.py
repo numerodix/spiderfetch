@@ -509,7 +509,6 @@ class Fetcher(object):
                 cont = True
             else:
                 self.filename = io.safe_filename(self.filename)
-
         # init vars here as we might start fetching from a non-zero position
         self.timestamp = time.time()
         self.started = True
