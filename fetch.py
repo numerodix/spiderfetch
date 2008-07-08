@@ -654,7 +654,9 @@ if __name__ == "__main__":
                 os.environ["ORIG_FILENAMES"] = "0"
             while args:
                 url = args.pop()
-                filename = io.safe_filename(urlrewrite.url_to_filename(url))
+                filename = urlrewrite.url_to_filename(url)
+                if not os.environ.get("CONT"):
+                    filename = io.safe_filename(filename)
                 try:
                     Fetcher(mode=Fetcher.FETCH, url=url,
                             filename=filename).launch_w_tries()
