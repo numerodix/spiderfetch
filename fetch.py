@@ -498,7 +498,7 @@ class Fetcher(object):
             interval = t - self.timestamp
             self.timestamp = t
 
-            rate = step * blocksize / interval
+            rate = step * blocksize / max(interval, 0.1)
             if totalsize and totalsize > 0:
                 self.totalsize = totalsize
             self.write_progress(rate=rate)
