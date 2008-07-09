@@ -404,7 +404,7 @@ class Fetcher(object):
             size = -1
 
         c = 0
-        while size > 1000:
+        while size > 999:
             size = size / 1024.
             c += 1
         r = "%3.1f" % size
