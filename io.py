@@ -118,7 +118,12 @@ def serialize(o, filename, dir=None):
     except AttributeError:
         pass
     #fp = gzip.GzipFile(logdir(filename), 'w', compresslevel=1)
-    pickle.dump(o, open(filename, 'w'), pickle.HIGHEST_PROTOCOL)
+    try:
+        filename_partial = filename + ".partial"
+        pickle.dump(o, open(filename_partial, 'w'), pickle.HIGHEST_PROTOCOL)
+        os.rename(filename_partial, filename)
+    finally:
+        os.path.exists(filename_partial) and os.unlink(filename_partial)
 
 def deserialize(filename, dir=None):
     if dir:
