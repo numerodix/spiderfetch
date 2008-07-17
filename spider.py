@@ -150,7 +150,7 @@ def colorize_shell(str, url=None):
 
 
 if __name__ == "__main__":
-    (parser, a) = io.init_opts("[ <url> [options] | --test ]")
+    (parser, a) = io.init_opts("[ <url|file> [options] | --test ]")
     a("--dump", action="store_true", help="Dump urls")
     a("--test", action="store_true", help="Run spider testsuite")
     (opts, args) = io.parse_args(parser)
