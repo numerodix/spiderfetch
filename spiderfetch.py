@@ -12,9 +12,13 @@ import io
 import recipe
 import shcolor
 import spider
+import time
 import urlrewrite
 import web
 
+
+SAVE_INTERVAL = 60*30
+LAST_SAVE = time.time()
 
 def save_session(wb, queue=None):
     hostname = urlrewrite.get_hostname(wb.root.url)
@@ -28,6 +32,14 @@ def save_session(wb, queue=None):
     elif io.file_exists(filename + ".session", dir=io.LOGDIR):
         io.delete(filename + ".session", dir=io.LOGDIR)
     io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
+
+def maybesave(wb, queue):
+    global SAVE_INTERVAL
+    global LAST_SAVE
+    t = time.time()
+    if LAST_SAVE + SAVE_INTERVAL < t:
+        save_session(wb, queue=queue)
+        LAST_SAVE = t
 
 def restore_session(url):
     hostname = urlrewrite.get_hostname(url)
@@ -108,6 +120,8 @@ def qualify_urls(ref_url, urls, rule, newqueue, wb):
 def process_records(queue, rule, wb):
     newqueue = []
     for record in queue:
+        maybesave(wb, queue)
+
         url = record.get("url")
         try:
             (fp, filename) = io.get_tempfile()
