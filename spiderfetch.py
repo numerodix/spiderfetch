@@ -22,23 +22,27 @@ class SpiderFetch(object):
         self.save_interval = 60*30
         self.last_save = time.time()
 
-    def save_session(self, wb, queue=None):
-        hostname = urlrewrite.get_hostname(wb.root.url)
+        self.wb = None
+        self.queue = None
+        self.rules = None
+
+    def save_session(self):
+        hostname = urlrewrite.get_hostname(self.wb.root.url)
         filename = urlrewrite.hostname_to_filename(hostname)
         io.write_err("Saving session to %s ..." %
              shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
-        io.serialize(wb, filename + ".web", dir=io.LOGDIR)
-        if queue:
-            io.serialize(queue, filename + ".session", dir=io.LOGDIR)
+        io.serialize(self.wb, filename + ".web", dir=io.LOGDIR)
+        if self.queue:
+            io.serialize(self.queue, filename + ".session", dir=io.LOGDIR)
         # only web being saved, ie. spidering complete, remove old session
         elif io.file_exists(filename + ".session", dir=io.LOGDIR):
             io.delete(filename + ".session", dir=io.LOGDIR)
         io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
 
-    def maybesave(self, wb, queue):
+    def maybesave(self):
         t = time.time()
         if self.last_save + self.save_interval < t:
-            self.save_session(wb, queue=queue)
+            self.save_session()
             self.last_save = t
 
     def restore_session(self, url):
@@ -49,24 +53,22 @@ class SpiderFetch(object):
             io.write_err("Restoring session from %s ..." %
                  shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
             q = io.deserialize(filename + ".session", dir=io.LOGDIR)
-            q = recipe.overrule_records(q)
-            wb = io.deserialize(filename + ".web", dir=io.LOGDIR)
+            self.queue = recipe.overrule_records(q)
+            self.wb = io.deserialize(filename + ".web", dir=io.LOGDIR)
             io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
-            return q, wb
-        return None, None
 
-    def log_exc(self, exc, url, wb):
+    def log_exc(self, exc, url):
         exc_filename = io.safe_filename("exc", dir=io.LOGDIR)
         io.serialize(exc, exc_filename, dir=io.LOGDIR)
         s = traceback.format_exc()
         s += "\nBad url:   |%s|\n" % url
-        node = wb.get(url)
+        node = self.wb.get(url)
         for u in node.incoming.keys():
             s += "Ref    :   |%s|\n" % u
         s += "Exception object serialized to file: %s\n\n" % exc_filename
         io.savelog(s, "error_log", "a")
 
-    def get_url(self, fetcher, wb, host_filter=False):
+    def get_url(self, fetcher, host_filter=False):
         """http 30x redirects produce a recursion with new urls that may or may not
         have been seen before"""
         while True:
@@ -75,15 +77,15 @@ class SpiderFetch(object):
                 break
             except fetch.ChangedUrlWarning, e:
                 url = urlrewrite.rewrite_urls(fetcher.url, [e.new_url]).next()
-                if url in wb:
+                if url in self.wb:
                     raise fetch.DuplicateUrlWarning
                 if not recipe.apply_hostfilter(host_filter, url):
                     raise fetch.UrlRedirectsOffHost
-                wb.add_ref(fetcher.url, url)
+                self.wb.add_ref(fetcher.url, url)
                 fetcher.url = url
         return fetcher.url
 
-    def qualify_urls(self, ref_url, urls, rule, newqueue, wb):
+    def qualify_urls(self, ref_url, urls, rule, newqueue):
         for url in urls:
             _dump, _fetch, _spider = False, False, False
 
@@ -98,7 +100,7 @@ class SpiderFetch(object):
 
             # build a record based on qualification
             record = {"url" : url}
-            if url not in wb:
+            if url not in self.wb:
                 if _dump:
                     io.write_out("%s\n" % url)
                 if _fetch and _spider:
@@ -113,34 +115,34 @@ class SpiderFetch(object):
 
             # add url to web if it was matched by anything
             if _dump or _fetch or _spider:
-                wb.add_url(ref_url, [url])
+                self.wb.add_url(ref_url, [url])
 
-        return newqueue, wb
+        return newqueue
 
-    def process_records(self, queue, rule, wb):
+    def process_records(self, rule):
         newqueue = []
-        for record in queue:
-            self.maybesave(wb, queue)
+        for record in self.queue:
+            self.maybesave()
 
             url = record.get("url")
             try:
                 (fp, filename) = io.get_tempfile()
                 f = fetch.Fetcher(mode=record.get("mode"), url=url, filename=filename)
-                url = self.get_url(f, wb, host_filter=rule.get("host_filter"))
+                url = self.get_url(f, host_filter=rule.get("host_filter"))
                 filename = f.filename
 
                 # consider retrying the fetch if it failed
                 if f.error and fetch.err.is_temporal(f.error):
                     if not record.get("retry"):
                         record["retry"] = True
-                        queue.append(record)
+                        self.queue.append(record)
 
                 if record.get("mode") == fetch.Fetcher.SPIDER:
                     data = open(filename, 'r').read()
                     urls = spider.unbox_it_to_ss(spider.findall(data, url))
                     urls = urlrewrite.rewrite_urls(url, urls)
 
-                    (newqueue, wb) = self.qualify_urls(url, urls, rule, newqueue, wb)
+                    newqueue = self.qualify_urls(url, urls, rule, newqueue)
 
                 if record.get("mode") == fetch.Fetcher.FETCH:
                     os.rename(filename,
@@ -149,12 +151,12 @@ class SpiderFetch(object):
             except (fetch.DuplicateUrlWarning, fetch.UrlRedirectsOffHost):
                 pass
             except KeyboardInterrupt:
-                q = queue[queue.index(record):]
+                q = self.queue[self.queue.index(record):]
                 q.extend(newqueue)
-                self.save_session(wb, queue=q)
+                self.save_session()
                 sys.exit(1)
             except Exception, exc:
-                self.log_exc(exc, url, wb)
+                self.log_exc(exc, url)
             finally:
                 try:
                     if filename and os.path.exists(filename):
@@ -182,28 +184,30 @@ class SpiderFetch(object):
                     spider_queue.append(r)
         return fetch_queue, spider_queue
 
-    def run(self, queue, rules, wb):
-        outer_queue = queue
-        for rule in rules:
+    def run(self):
+        assert self.queue and self.wb and self.rules
+
+        outer_queue = self.queue
+        for rule in self.rules:
             depth = rule.get("depth", 1)
 
             # queue will be exhausted in inner loop, but once depth is reached
             # the contents to spider will fall through to outer_queue
-            outer_queue, queue = [], outer_queue
+            outer_queue, self.queue = [], outer_queue
 
-            while queue:
+            while self.queue:
                 if depth > 0:
                     depth -= 1
                 elif depth == 0:
                 # There may still be records in the queue, but since depth is reached
                 # no more spidering is allowed, so we allow one more iteration, but
                 # only for fetching
-                    queue, outer_queue = self.split_queue(queue, 
-                                          rules.index(rule) == len(rules)-1)
+                    self.queue, outer_queue = self.split_queue(self.queue,
+                              self.rules.index(rule) == len(self.rules)-1)
 
-                queue = self.process_records(queue, rule, wb)
+                self.queue = self.process_records(rule)
 
-        self.save_session(wb)
+        self.save_session()
 
 
 if __name__ == "__main__":
@@ -226,17 +230,19 @@ if __name__ == "__main__":
 
         sp = SpiderFetch()
         url = args[0]
-        (q, w) = sp.restore_session(url)
+
+        sp.restore_session(url)
+        sp.queue = sp.queue or recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
+        sp.wb = sp.wb or web.Web(url)
+
         if opts.recipe:
-            rules = recipe.load_recipe(opts.recipe, url)
+            sp.rules = recipe.load_recipe(opts.recipe, url)
         else:
             pattern = args[1]
-            rules = recipe.get_recipe(pattern, url)
-        queue = q or recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
-        wb = w or web.Web(url)
+            sp.rules = recipe.get_recipe(pattern, url)
     except recipe.PatternError, e:
         io.write_err(shcolor.color(shcolor.RED, "%s\n" % e))
         sys.exit(1)
     except IndexError:
         io.opts_help(None, None, None, parser)
-    sp.run(queue, rules, wb)
+    sp.run()
