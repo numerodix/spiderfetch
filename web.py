@@ -1,25 +1,124 @@
 #!/usr/bin/env python
 
 import pickle
+import sqlite3
 import sys
+import UserDict
 
 import io
 import shcolor
 
 
+import os; os.path.exists('db.websq') and os.unlink('db.websq')
+conn = sqlite3.connect('db.websq')
+conn.row_factory = sqlite3.Row
+c = conn.cursor()
+
+class DBDict(UserDict.IterableUserDict):
+    def __init__(self, table):
+        self.table = table
+        UserDict.IterableUserDict.__init__(self)
+
+    def __getitem__(self, url):
+        return Node(url)
+
+    def get(self, url):
+        return self.__getitem__(url)
+
+    def __iter__(self):
+        for f in c.execute('select * from %s' % self.table):
+            yield f['docurl']
+
+    def __setitem__(self, url, node):
+        global conn, c
+        try:
+            c.execute('insert into %s values (?, null)' % self.table, (url,))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            pass
+
+    def __delitem__(self, url):
+        global conn, c
+        c.execute('delete from %s where docurl=?' % self.table, (url,))
+        conn.commit()
+
+    def __contains__(self, url):
+        global conn, c
+        for e in c.execute('select count(*) from %s where docurl=?' % self.table, (url,)):
+            return e[0]
+
+    def __len__(self):
+        global conn, c
+        for e in c.execute('select count(*) from %s' % self.table):
+            return e[0]
+
+    def __str__(self):
+        global conn, c
+        return ", ".join(t for t in self.__iter__())
+        
+class DBDictDouble(DBDict):
+    def __init__(self, table, nodeurl):
+        self.nodeurl = nodeurl
+        DBDict.__init__(self, table)
+
+    def __getitem__(self, url):
+        return Node(url)
+
+    def __setitem__(self, url, node):
+        global conn, c
+        try:
+            c.execute('insert into %s values (?, ?)' % self.table,
+                      (self.nodeurl, node.url))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            pass
+
+    def __delitem__(self, url):
+        global conn, c
+        c.execute('delete from %s where docurl=?' % self.table, (url,))
+        conn.commit()
+
+    def __str__(self):
+        global conn, c
+        return ", ".join(str(t['linkurl']) for t in
+             c.execute('select * from %s where docurl=?' % self.table, (self.nodeurl,)))
+
 class Node(object):
     def __init__(self, url):
         self.url = url
-        self.incoming = {}
-        self.outgoing = {}
+        self.incoming = DBDictDouble('node_in', url)
+        self.outgoing = DBDictDouble('node_out', url)
         self.aliases = [url]
 
 class Web(object):
-    def __init__(self, root=None):
-        self.root = None
-        self.index = {}
+    def __init__(self, root=None, existing=False):
+        global conn, c
+        if not existing:
+            c.execute('create table node (docurl text primary key, is_root boolean)')
+            c.execute('create table node_in (docurl text, linkurl text)')
+            c.execute('create table node_out (docurl text, linkurl text)')
+            c.execute('create table node_ref (refurl text, docurl text)')
+            conn.commit()
+
+        self.index = DBDict('node')
         if root:
             self.add_url(root, [])
+
+    def set_root(self, node):
+        global conn, c
+        try:
+            c.execute('insert into node values (?, ?)', (node.url, True))
+        except sqlite3.IntegrityError:
+            c.execute('update node set is_root=? where docurl=?', (True, node.url))
+        c.execute('update node set is_root=? where docurl!=?', (False, node.url))
+        conn.commit()
+
+    def get_root(self):
+        global conn, c
+        for e in c.execute('select docurl from node where is_root=?', (True,)):
+            return Node(e['docurl'])
+
+    root = property(fget=get_root, fset=set_root)
 
     def __contains__(self, e):
         return e in self.index
@@ -187,6 +286,7 @@ if __name__ == "__main__":
         if opts.test:
             wb = Web()
             wb.root = Node("a")
+            wb.root = Node("a")
             wb.index["a"] = wb.root
             wb.index["b"] = Node("b")
             wb.index["c"] = Node("c")
@@ -202,7 +302,10 @@ if __name__ == "__main__":
             wb.print_trace(wb.get_trace("c"))   # inf loop if loop not detected
             sys.exit()
 
-        wb = io.deserialize(args[0])
+        conn = sqlite3.connect(args[0])
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        wb = Web(existing=True)
         if opts.dump:
             wb.dump()
         elif opts.into or opts.out:
