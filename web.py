@@ -9,10 +9,13 @@ import io
 import shcolor
 
 
-import os; os.path.exists('db.websq') and os.unlink('db.websq')
-conn = sqlite3.connect('db.websq')
-conn.row_factory = sqlite3.Row
-c = conn.cursor()
+conn, c = None, None
+if not __name__ == "__main__":
+    f = io.safe_filename('db.websq')
+    conn = sqlite3.connect(f)
+    conn.row_factory = sqlite3.Row
+    conn.text_factory = str
+    c = conn.cursor()
 
 class DBDict(UserDict.IterableUserDict):
     def __init__(self, table):
@@ -304,6 +307,7 @@ if __name__ == "__main__":
 
         conn = sqlite3.connect(args[0])
         conn.row_factory = sqlite3.Row
+        conn.text_factory = str
         c = conn.cursor()
         wb = Web(existing=True)
         if opts.dump:
