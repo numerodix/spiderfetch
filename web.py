@@ -232,11 +232,22 @@ class Web(object):
 
 class SqliteWeb(Web):
     schema = """
-    create table if not exists node (nodeid integer, url text primary key);
-    create table if not exists node_in  (nodeid integer, url text);
-    create table if not exists node_out (nodeid integer, url text);
-    create table if not exists node_ref (nodeid integer, url text);
-    """.strip()
+    CREATE TABLE IF NOT EXISTS root (nodeid INTEGER PRIMARY KEY);
+    CREATE TABLE IF NOT EXISTS node (nodeid INTEGER PRIMARY KEY, url TEXT UNIQUE);
+    CREATE TABLE IF NOT EXISTS node_in  (docid INTEGER, linkid INTEGER);
+    CREATE TABLE IF NOT EXISTS node_out (docid INTEGER, linkid INTEGER);
+    CREATE TABLE IF NOT EXISTS node_alias (nodeid INTEGER, url TEXT PRIMARY KEY);
+
+    CREATE VIEW IF NOT EXISTS rootview AS
+        SELECT root.nodeid AS nodeid, url FROM root JOIN node ON root.nodeid;
+    CREATE TRIGGER set_root INSERT ON rootview
+        BEGIN
+            INSERT INTO node VALUES (NULL, rootview.url);
+        END;
+    """
+    """
+        
+    """
 
     def __init__(self, file=":memory", *a, **k):
         Web.__init__(self, *a, **k)
@@ -252,7 +263,10 @@ class SqliteWeb(Web):
     ## root
 
     def get_root_node(self):
-        return self.root
+        self.cur.execute('SELECT * FROM rootview')
+        res = self.cur.fetchone()
+        return Node(res['url'], id=res['nodeid'])
+        #return self.root
 
     def get_root(self):
         return self.get_root_node().url
@@ -260,16 +274,23 @@ class SqliteWeb(Web):
     def set_root(self, url):
         self.add_node(url)
         node = self.get_node(url)
-        self.root = node
+        self.cur.execute('DELETE FROM ROOT')
+        self.cur.execute('INSERT INTO root VALUES (?)', (node.id,))
+        #node = self.get_node(url)
+        #self.root = node
 
     ## index
 
     def add_node(self, url):
-        if url not in self.index:
-            self.index[url] = Node(url)
+        self.cur.execute('INSERT OR IGNORE INTO node VALUES (NULL, ?)', (url,))
+        #if url not in self.index:
+        #    self.index[url] = Node(url)
 
     def get_node(self, url):
-        return self.index[url]
+        self.cur.execute('SELECT * FROM node WHERE url=?', (url,))
+        res = self.cur.fetchone()
+        return Node(res['url'], id=res['nodeid'])
+        #return self.index[url]
 
     ## index public
 
@@ -363,7 +384,8 @@ if __name__ == "__main__":
     (opts, args) = io.parse_args(parser)
     try:
         if opts.test:
-            wb = SqliteWeb()
+            if os.path.exists('db.websq'): os.unlink('db.websq')
+            wb = SqliteWeb(file="db.websq")
 
             wb.set_root('a')
             wb.add_ref('a', 'adupe')
