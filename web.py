@@ -131,7 +131,7 @@ class Web(object):
         return len(self.get_node(url).aliases)
 
 
-    ### Introspective
+    ### Service methods
 
     def dump(self):
         for u in self.get_iterurls():
@@ -177,7 +177,6 @@ class Web(object):
                         paths_next.append(newpath)
             paths = paths_next
 
-    # is this supposed to be longest (in graph) or deepest (from root)?
     def deepest_url(self):
         paths = []
         for url in self.get_iterurls():
