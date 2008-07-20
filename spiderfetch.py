@@ -27,7 +27,7 @@ class SpiderFetch(object):
         self.rules = None
 
     def save_session(self):
-        hostname = urlrewrite.get_hostname(self.wb.root.url)
+        hostname = urlrewrite.get_hostname(self.wb.get_root())
         filename = urlrewrite.hostname_to_filename(hostname)
         io.write_err("Saving session to %s ..." %
              shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
@@ -62,8 +62,7 @@ class SpiderFetch(object):
         io.serialize(exc, exc_filename, dir=io.LOGDIR)
         s = traceback.format_exc()
         s += "\nBad url:   |%s|\n" % url
-        node = self.wb.get(url)
-        for u in node.incoming.keys():
+        for u in self.wb.get_iterincoming(url):
             s += "Ref    :   |%s|\n" % u
         s += "Exception object serialized to file: %s\n\n" % exc_filename
         io.savelog(s, "error_log", "a")
