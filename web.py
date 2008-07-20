@@ -405,15 +405,19 @@ if __name__ == "__main__":
     try:
         if opts.test or opts.testmem:
             testfile = 'testsuite'
+
+            mem_file = testfile + '.web'
+            sql_file = testfile + '.websq'
+            for f in (mem_file, sql_file):
+                if os.path.exists(f):
+                    os.unlink(f)
+
             if opts.test:
-                db_file = testfile + '.websq'
+                db_file = sql_file
                 wb = SqliteWeb(file=db_file)
             else:
-                db_file = testfile + '.web'
+                db_file = mem_file
                 wb = Web()
-
-            if os.path.exists(db_file): 
-                os.unlink(db_file)
 
             wb.set_root('b')
             wb.set_root('a')
