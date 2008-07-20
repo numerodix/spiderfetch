@@ -9,10 +9,10 @@ import shcolor
 
 class Node(object):
     def __init__(self, url, id=None):
-        self._url = url
-        self._incoming = {}
-        self._outgoing = {}
-        self._aliases = [url]
+        self.url = url
+        self.incoming = {}
+        self.outgoing = {}
+        self.aliases = [url]
         if id:
             self.id = id
         else:
@@ -23,8 +23,8 @@ class Node(object):
 
 class Web(object):
     def __init__(self, url_root=None):
-        self._root = None
-        self._index = {}
+        self.root = None
+        self.index = {}
 
         if url_root:
             self.set_root(url_root)
@@ -33,29 +33,29 @@ class Web(object):
     ## root
 
     def get_root_node(self):
-        return self._root
+        return self.root
 
     def get_root(self):
-        return self.get_root_node()._url
+        return self.get_root_node().url
 
     def set_root(self, url):
         self.add_node(url)
         node = self.get_node(url)
-        self._root = node
+        self.root = node
 
     ## index
 
     def add_node(self, url):
-        if url not in self._index:
-            self._index[url] = Node(url)
+        if url not in self.index:
+            self.index[url] = Node(url)
 
     def get_node(self, url):
-        return self._index[url]
+        return self.index[url]
 
     ## index public
 
     def get_iterurls(self):
-        return self._index.keys()
+        return self.index.keys()
 
     def add_url(self, url, children):
         self.add_node(url)
@@ -63,14 +63,14 @@ class Web(object):
         self.add_outgoing(url, children)
 
     def add_ref(self, url, new_url):
-        self._index[new_url] = self._index[url]
+        self.index[new_url] = self.index[url]
         self.add_alias(url, new_url)
 
     def __contains__(self, url):
-        return url in self._index
+        return url in self.index
 
     def __len__(self):
-        return len(self._index)
+        return len(self.index)
 
     def __str__(self):
         return ", ".join(u for u in self.get_iterurls())
@@ -83,13 +83,13 @@ class Web(object):
         for c_url in children:
             self.add_node(c_url)
             n = self.get_node(c_url)
-            n._incoming[url] = node
+            n.incoming[url] = node
 
     def get_iterincoming(self, url):
-        return (u for u in self.get_node(url)._incoming)
+        return (u for u in self.get_node(url).incoming)
 
     def len_incoming(self, url):
-        return len(self.get_node(url)._incoming)
+        return len(self.get_node(url).incoming)
 
     ## outgoing
 
@@ -98,22 +98,22 @@ class Web(object):
         for c_url in children:
             self.add_node(c_url)
             n = self.get_node(c_url)
-            node._outgoing[c_url] = n
+            node.outgoing[c_url] = n
 
     def get_iteroutgoing(self, url):
-        return (u for u in self.get_node(url)._outgoing)
+        return (u for u in self.get_node(url).outgoing)
 
     ## aliases
 
     def add_alias(self, url, url_alias):
         if not url == url_alias:
-            self.get_node(url)._aliases.append(url_alias)
+            self.get_node(url).aliases.append(url_alias)
 
     def get_iteraliases(self, url):
-        return (a for a in self.get_node(url)._aliases)
+        return (a for a in self.get_node(url).aliases)
 
     def len_aliases(self, url):
-        return len(self.get_node(url)._aliases)
+        return len(self.get_node(url).aliases)
 
 
     ### Introspective
@@ -218,18 +218,18 @@ class Web(object):
     ### Pickling
 
     def _to_pickle(self):
-        for node in self._index.itervalues():
-            for n in node._incoming:
-                node._incoming[n] = None
-            for n in node._outgoing:
-                node._outgoing[n] = None
+        for node in self.index.itervalues():
+            for n in node.incoming:
+                node.incoming[n] = None
+            for n in node.outgoing:
+                node.outgoing[n] = None
 
     def _from_pickle(self):
-        for node in self._index.itervalues():
-            for n in node._incoming:
-                node._incoming[n] = self._index[n]
-            for n in node._outgoing:
-                node._outgoing[n] = self._index[n]
+        for node in self.index.itervalues():
+            for n in node.incoming:
+                node.incoming[n] = self.index[n]
+            for n in node.outgoing:
+                node.outgoing[n] = self.index[n]
 
 
 
