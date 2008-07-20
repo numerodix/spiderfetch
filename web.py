@@ -4,6 +4,7 @@ import pickle
 import os
 import sqlite3
 import sys
+import time
 
 import io
 import shcolor
@@ -255,37 +256,53 @@ class SqliteWeb(Web):
             file = file + EXT_SQL
         self.file = file
 
+        self.commitinterval = 60
         self.connect()
 
         # setup db before we touch any datastructures
         Web.__init__(self, *a, **k)
 
+
+    ## db handling
+
     def connect(self):
-        self.conn = sqlite3.connect(self.file, isolation_level=None)
+        self.conn = sqlite3.connect(self.file)
         self.conn.row_factory = sqlite3.Row
         self.conn.text_factory = str
         self.cur = self.conn.cursor()
 
         self.cur.executescript(self.__class__.schema)
+        self.lastcommit = time.time()
 
     def disconnect(self):
         self.conn.close()
 
+    def db_maybe_commit(self):
+        t = time.time()
+        if self.lastcommit + self.commitinterval < t:
+            self.conn.commit()
+            self.lastcommit = t
+
     def db_exec(self, q, *args):
         self.cur.execute(q, *args)
+        self.db_maybe_commit()
 
-    def db_tuple(self, q, *args):
+    def db_execmany(self, q, *args):
+        self.cur.executemany(q, *args)
+        self.db_maybe_commit()
+
+    def get_db_tuple(self, q, *args):
         self.cur.execute(q, *args)
         res = self.cur.fetchone()
         if res:
             return res
 
-    def db_single(self, q, *args):
-        res = self.db_tuple(q, *args)
+    def get_db_single(self, q, *args):
+        res = self.get_db_tuple(q, *args)
         if res:
             return res[0]
 
-    def db_iter(self, q, *args):
+    def get_db_iter(self, q, *args):
         self.cur.execute(q, *args)
         res = self.cur.fetchall()
         for r in res:
@@ -294,7 +311,7 @@ class SqliteWeb(Web):
     ## root
 
     def get_root_node(self):
-        res = self.db_tuple('SELECT * FROM node WHERE is_root=?', (True,))
+        res = self.get_db_tuple('SELECT * FROM node WHERE is_root=?', (True,))
         return Node(res['url'], id=res['nodeid'])
 
     def get_root(self):
@@ -313,19 +330,19 @@ class SqliteWeb(Web):
         self.db_exec(q, (url, False))
 
     def get_node(self, url):
-        res = self.db_tuple('SELECT * FROM node WHERE url=?', (url,))
+        res = self.get_db_tuple('SELECT * FROM node WHERE url=?', (url,))
         return Node(res['url'], id=res['nodeid'])
 
     ## index public
 
     def get_iterurls(self):
-        return (u for u in self.db_iter('SELECT url FROM node'))
+        return (u for u in self.get_db_iter('SELECT url FROM node'))
 
     def __contains__(self, url):
-        return self.db_single('SELECT * FROM node WHERE url=?', (url,))
+        return self.get_db_single('SELECT * FROM node WHERE url=?', (url,))
 
     def __len__(self):
-        return self.db_single('SELECT COUNT (*) FROM node')
+        return self.get_db_single('SELECT COUNT (*) FROM node')
 
     ## incoming
 
@@ -335,15 +352,15 @@ class SqliteWeb(Web):
             self.add_node(c_url)
             lst.append((c_url, url))
         q = 'INSERT OR IGNORE INTO node_in VALUES (?, ?)'
-        self.cur.executemany(q, lst)
+        self.db_execmany(q, lst)
 
     def get_iterincoming(self, url):
         q = 'SELECT linkurl FROM node_in WHERE nodeurl=?'
-        return (u for u in self.db_iter(q, (url,)))
+        return (u for u in self.get_db_iter(q, (url,)))
 
     def len_incoming(self, url):
         q = 'SELECT COUNT(*) FROM node_in WHERE nodeurl=?'
-        return self.db_single(q, (url,))
+        return self.get_db_single(q, (url,))
 
     ## outgoing
 
@@ -353,11 +370,11 @@ class SqliteWeb(Web):
             self.add_node(c_url)
             lst.append((url, c_url))
         q = 'INSERT OR IGNORE INTO node_out VALUES (?, ?)'
-        self.cur.executemany(q, lst)
+        self.db_execmany(q, lst)
 
     def get_iteroutgoing(self, url):
         q = 'SELECT linkurl FROM node_out WHERE nodeurl=?'
-        return (u for u in self.db_iter(q, (url,)))
+        return (u for u in self.get_db_iter(q, (url,)))
 
     ## aliases
 
@@ -368,12 +385,12 @@ class SqliteWeb(Web):
 
     def get_iteraliases(self, url):
         q = 'SELECT url FROM node WHERE nodeid=(SELECT nodeid FROM node WHERE url=?)'
-        return (u for u in self.db_iter(q, (url,)))
+        return (u for u in self.get_db_iter(q, (url,)))
 
     def len_aliases(self, url):
         q = '''SELECT COUNT(url) FROM node
             WHERE nodeid=(SELECT nodeid FROM node WHERE url=?)'''
-        return self.db_single(q, (url,))
+        return self.get_db_single(q, (url,))
 
 
 def save_web(wb, filename, dir=None):
