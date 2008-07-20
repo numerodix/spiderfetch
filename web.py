@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import pickle
+import os
 import sys
 
 import io
@@ -138,7 +139,7 @@ class Web(object):
 
     def assert_in_web(self, url):
         if url not in self:
-            io.write_err("Url %s not in the web\n" %
+            io.write_err("Url not in the web: %s\n" %
                          shcolor.color(shcolor.YELLOW, url))
             sys.exit(1)
         
@@ -229,6 +230,19 @@ class Web(object):
         s += "Web size : %s urls\n" % len(self)
         io.write_err(s)
 
+def save_web(wb, filename, dir=None):
+    (base, ext) = os.path.splitext(filename)
+    if ext == '.web':
+        return io.serialize(wb, filename, dir=None)
+    raise Exception, "Unknown web extension: %s" % ext
+
+def restore_web(filename, dir=None):
+    (base, ext) = os.path.splitext(filename)
+    if ext == '.web':
+        return io.deserialize(filename, dir=None)
+    io.write_fatal("Failed to restore web from file %s\n" % filename)
+    sys.exit(1)
+
 
 
 if __name__ == "__main__":
@@ -255,8 +269,8 @@ if __name__ == "__main__":
             wb.add_incoming('d', 'e')
             wb.add_incoming('e', 'd')   # create loop b <-> c
 
-            io.serialize(wb, "web")
-            wb = io.deserialize("web")
+            save_web(wb, "testsuite.web")
+            wb = restore_web("testsuite.web")
 
             io.write_err("Root :  %s\n" % wb.get_root())
             io.write_err("Web  :  %s\n" % wb)
@@ -284,7 +298,7 @@ if __name__ == "__main__":
 
             sys.exit()
 
-        wb = io.deserialize(args[0])
+        wb = restore_web(args[0])
         if opts.dump:
             wb.dump()
         elif opts.into or opts.out:

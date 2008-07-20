@@ -71,8 +71,11 @@ def write_err(s):
 def write_header(s):
     write_err("  %s\n" % shcolor.color(shcolor.GREEN, s))
 
+def write_fatal(s):
+    write_err("%s" % shcolor.color(shcolor.RED, s))
+
 def write_abort():
-    write_err("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
+    write_fatal("\nUser aborted\n")
 
 def get_tempfile():
 	return tempfile.mkstemp(prefix="."+os.path.basename(sys.argv[0])+".")

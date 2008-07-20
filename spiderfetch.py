@@ -31,7 +31,7 @@ class SpiderFetch(object):
         filename = urlrewrite.hostname_to_filename(hostname)
         io.write_err("Saving session to %s ..." %
              shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
-        io.serialize(self.wb, filename + ".web", dir=io.LOGDIR)
+        web.save_web(self.wb, filename + ".web", dir=io.LOGDIR)
         if self.queue:
             io.serialize(self.queue, filename + ".session", dir=io.LOGDIR)
         # only web being saved, ie. spidering complete, remove old session
@@ -54,7 +54,7 @@ class SpiderFetch(object):
                  shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
             q = io.deserialize(filename + ".session", dir=io.LOGDIR)
             self.queue = recipe.overrule_records(q)
-            self.wb = io.deserialize(filename + ".web", dir=io.LOGDIR)
+            self.wb = web.restore_web(filename + ".web", dir=io.LOGDIR)
             io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
 
     def log_exc(self, exc, url):
