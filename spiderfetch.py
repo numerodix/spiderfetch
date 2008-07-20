@@ -37,14 +37,19 @@ class SpiderFetch(object):
 
     def save_session(self):
         filename = self.get_session_filename()
+        ext = web.get_ext(self.wb)
+
         io.write_err("Saving session to %s ..." %
-             shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
-        web.save_web(self.wb, filename + ".web", dir=io.LOGDIR)
+             shcolor.color(shcolor.YELLOW, filename+".{%s,session}" % ext))
+        web.save_web(self.wb, filename + ext, dir=io.LOGDIR)
+
         if self.queue:
             io.serialize(self.queue, filename + ".session", dir=io.LOGDIR)
+
         # only web being saved, ie. spidering complete, remove old session
         elif io.file_exists(filename + ".session", dir=io.LOGDIR):
             io.delete(filename + ".session", dir=io.LOGDIR)
+
         io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
 
     def maybesave(self):
@@ -55,13 +60,25 @@ class SpiderFetch(object):
 
     def restore_session(self, url):
         filename = self.get_session_filename()
-        if (io.file_exists(filename + ".session", dir=io.LOGDIR) and
-            io.file_exists(filename + ".web", dir=io.LOGDIR)):
+
+        session, webmem, websql, ext = True, True, True, None
+        if io.file_exists(filename + ".session", dir=io.LOGDIR):
+            session = True
+        if io.file_exists(filename + web.EXT_MEM, dir=io.LOGDIR):
+            webmem = True
+            ext = web.EXT_MEM
+        if io.file_exists(filename + web.EXT_SQL, dir=io.LOGDIR):
+            websql = True
+            ext = web.EXT_SQL
+       
+        if session and (webmem or websql):
             io.write_err("Restoring session from %s ..." %
-                 shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
+                 shcolor.color(shcolor.YELLOW, filename+".{%s,session}" % ext))
+
             q = io.deserialize(filename + ".session", dir=io.LOGDIR)
             self.queue = recipe.overrule_records(q)
-            self.wb = web.restore_web(filename + ".web", dir=io.LOGDIR)
+            self.wb = web.restore_web(filename + ext, dir=io.LOGDIR)
+
             io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
 
     def log_exc(self, exc, url):

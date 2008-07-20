@@ -393,10 +393,16 @@ class SqliteWeb(Web):
         return self.get_db_single(q, (url,))
 
 
+def get_ext(wb):
+    if isinstance(wb, SqliteWeb):
+        return EXT_SQL
+    elif isinstance(wb, Web):
+        return EXT_MEM
+
 def save_web(wb, filename, dir=None):
     if isinstance(wb, SqliteWeb):
+        wb.conn.commit()
         return
-        return wb.disconnect()
     elif isinstance(wb, Web):
         return io.serialize(wb, filename, dir=None)
     raise Exception, "Unknown web type: %s" % type(wb)
