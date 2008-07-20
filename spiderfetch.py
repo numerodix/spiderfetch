@@ -19,7 +19,7 @@ import web
 
 class SpiderFetch(object):
     def __init__(self, starturl=None):
-        self.save_interval = 1*30
+        self.save_interval = 60*30
         self.last_save = time.time()
 
         self.starturl = starturl
