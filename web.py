@@ -237,15 +237,16 @@ class SqliteWeb(Web):
     CREATE TABLE IF NOT EXISTS node_in  (nodeurl TEXT, linkurl TEXT);
     CREATE TABLE IF NOT EXISTS node_out (nodeurl TEXT, linkurl TEXT);
 
+    CREATE UNIQUE INDEX IF NOT EXISTS node_in_index   ON node_in  (nodeurl, linkurl);
+    CREATE UNIQUE INDEX IF NOT EXISTS node_out_index  ON node_out (nodeurl, linkurl);
+    """
+    """
     CREATE        INDEX IF NOT EXISTS node_id_index   ON node     (nodeid);
     CREATE        INDEX IF NOT EXISTS node_url_index  ON node     (url);
     CREATE        INDEX IF NOT EXISTS node_root_index ON node     (is_root);
 
     CREATE        INDEX IF NOT EXISTS node_in_node    ON node_in  (nodeurl);
     CREATE        INDEX IF NOT EXISTS node_out_node   ON node_out (nodeurl);
-
-    CREATE UNIQUE INDEX IF NOT EXISTS node_in_index   ON node_in  (nodeurl, linkurl);
-    CREATE UNIQUE INDEX IF NOT EXISTS node_out_index  ON node_out (nodeurl, linkurl);
     """
 
     def __init__(self, file=":memory:", *a, **k):
