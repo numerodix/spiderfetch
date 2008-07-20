@@ -160,19 +160,20 @@ class Web(object):
     def get_trace(self, url):
         self.assert_in_web(url)
         seen = {}
+        web_root = self.get_root_node()
         paths = [[url]]
         seen[url] = True
         while paths:
             paths_next = []
             for path in paths:
-                if self.get_node(path[0]) == self.get_root_node():
+                if self.get_node(path[0]) == web_root:
                     return path
                 for url in self.get_iterincoming(path[-1]):
                     if url not in seen:     # loop detected, drop this path
                         seen[url] = True
                         newpath = path[:]   # careful, this is a copy, not ref!
                         newpath.append(url)
-                        if self.get_node(url) == self.get_root_node():
+                        if self.get_node(url) == web_root:
                             newpath.reverse()
                             return newpath
                         paths_next.append(newpath)
