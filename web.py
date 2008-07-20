@@ -29,6 +29,21 @@ class Web(object):
         if url_root:
             self.set_root(url_root)
 
+    ### Pickling
+
+    def _to_pickle(self):
+        for node in self.index.itervalues():
+            for n in node.incoming:
+                node.incoming[n] = None
+            for n in node.outgoing:
+                node.outgoing[n] = None
+
+    def _from_pickle(self):
+        for node in self.index.itervalues():
+            for n in node.incoming:
+                node.incoming[n] = self.index[n]
+            for n in node.outgoing:
+                node.outgoing[n] = self.index[n]
 
     ## root
 
@@ -74,7 +89,6 @@ class Web(object):
 
     def __str__(self):
         return ", ".join(u for u in self.get_iterurls())
-
 
     ## incoming
 
@@ -214,22 +228,6 @@ class Web(object):
         s  = "Root url : %s\n" % self.get_root()
         s += "Web size : %s urls\n" % len(self)
         io.write_err(s)
-
-    ### Pickling
-
-    def _to_pickle(self):
-        for node in self.index.itervalues():
-            for n in node.incoming:
-                node.incoming[n] = None
-            for n in node.outgoing:
-                node.outgoing[n] = None
-
-    def _from_pickle(self):
-        for node in self.index.itervalues():
-            for n in node.incoming:
-                node.incoming[n] = self.index[n]
-            for n in node.outgoing:
-                node.outgoing[n] = self.index[n]
 
 
 
