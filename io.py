@@ -114,6 +114,11 @@ def savelog(s, filename, mode=None):
     mode = mode or 'w'
     open(os.path.join(LOGDIR, filename), mode).write(s)
 
+def p_join(filename, dir):
+    if dir:
+        filename = os.path.join(dir, filename)
+    return filename
+
 def serialize(o, filename, dir=None):
     if dir:
         create_dir(dir)

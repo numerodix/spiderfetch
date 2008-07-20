@@ -234,11 +234,18 @@ class SqliteWeb(Web):
     CREATE TABLE IF NOT EXISTS node_in  (nodeurl TEXT, linkurl TEXT);
     CREATE TABLE IF NOT EXISTS node_out (nodeurl TEXT, linkurl TEXT);
 
-    CREATE UNIQUE INDEX IF NOT EXISTS node_in_index  ON node_in  (nodeurl, linkurl);
-    CREATE UNIQUE INDEX IF NOT EXISTS node_out_index ON node_out (nodeurl, linkurl);
+    CREATE        INDEX IF NOT EXISTS node_id_index   ON node     (nodeid);
+    CREATE        INDEX IF NOT EXISTS node_url_index  ON node     (url);
+    CREATE        INDEX IF NOT EXISTS node_root_index ON node     (is_root);
+
+    CREATE        INDEX IF NOT EXISTS node_in_node    ON node_in  (nodeurl);
+    CREATE        INDEX IF NOT EXISTS node_out_node   ON node_out (nodeurl);
+
+    CREATE UNIQUE INDEX IF NOT EXISTS node_in_index   ON node_in  (nodeurl, linkurl);
+    CREATE UNIQUE INDEX IF NOT EXISTS node_out_index  ON node_out (nodeurl, linkurl);
     """
 
-    def __init__(self, file=":memory", *a, **k):
+    def __init__(self, file=":memory:", *a, **k):
         Web.__init__(self, *a, **k)
         self.file = file
         self.connect()
@@ -367,6 +374,11 @@ def save_web(wb, filename, dir=None):
     raise Exception, "Unknown web type: %s" % type(wb)
 
 def restore_web(filename, dir=None):
+    filename = io.p_join(filename, dir)
+    if not os.path.exists(filename):
+        io.write_fatal("Web file not found: %s\n" % filename)
+        sys.exit(1)
+
     (base, ext) = os.path.splitext(filename)
     if ext == '.web':
         return io.deserialize(filename, dir=None)
@@ -392,12 +404,12 @@ if __name__ == "__main__":
     (opts, args) = io.parse_args(parser)
     try:
         if opts.test or opts.testmem:
-            file = 'testsuite'
+            testfile = 'testsuite'
             if opts.test:
-                db_file = file + '.websq'
+                db_file = testfile + '.websq'
                 wb = SqliteWeb(file=db_file)
             else:
-                db_file = file + '.web'
+                db_file = testfile + '.web'
                 wb = Web()
 
             if os.path.exists(db_file): 
@@ -412,13 +424,13 @@ if __name__ == "__main__":
             wb.add_incoming('d', 'e')
             wb.add_incoming('e', 'd')   # create loop b <-> c
 
-            save_web(wb, db_file)
-            wb = restore_web(db_file)
-
             io.write_err("Root :  %s\n" % wb.get_root())
             io.write_err("Web  :  %s\n" % wb)
             io.write_err("d.in :  %s\n" % ", ".join(u for u in wb.get_iterincoming('d')))
             io.write_err("e.in :  %s\n" % ", ".join(u for u in wb.get_iterincoming('e')))
+
+            save_web(wb, db_file)
+            wb = restore_web(db_file)
 
             io.write_header('stats()')
             wb.print_stats()
