@@ -33,7 +33,7 @@ class SpiderFetch(object):
         return urlrewrite.hostname_to_filename(hostname)
 
     def new_session(self):
-        return web.SqliteWeb(file=self.get_session_filename())
+        return web.SqliteWeb(url_root=self.starturl, file=self.get_session_filename())
 
     def save_session(self):
         filename = self.get_session_filename()

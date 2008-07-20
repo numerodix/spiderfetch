@@ -249,14 +249,14 @@ class SqliteWeb(Web):
     """
 
     def __init__(self, file=":memory:", *a, **k):
-        Web.__init__(self, *a, **k)
-
         (base, ext) = os.path.splitext(file)
         if not ext:
             file = file + EXT_SQL
         self.file = file
 
         self.connect()
+
+        Web.__init__(self, *a, **k)
 
     def connect(self):
         self.conn = sqlite3.connect(self.file, isolation_level=None)
