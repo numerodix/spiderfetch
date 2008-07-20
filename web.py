@@ -2,6 +2,7 @@
 
 import pickle
 import os
+import sqlite3
 import sys
 
 import io
@@ -229,6 +230,110 @@ class Web(object):
         s += "Web size : %s urls\n" % len(self)
         io.write_err(s)
 
+class SqliteWeb(Web):
+    schema = """
+    create table if not exists node (nodeid integer, url text primary key);
+    create table if not exists node_in  (nodeid integer, url text);
+    create table if not exists node_out (nodeid integer, url text);
+    create table if not exists node_ref (nodeid integer, url text);
+    """.strip()
+
+    def __init__(self, file=":memory", *a, **k):
+        Web.__init__(self, *a, **k)
+        self.file = file
+
+        self.conn = sqlite3.connect(self.file, isolation_level=None)
+        self.conn.row_factory = sqlite3.Row
+        self.conn.text_factory = str
+        self.cur = self.conn.cursor()
+
+        self.cur.executescript(self.__class__.schema)
+
+    ## root
+
+    def get_root_node(self):
+        return self.root
+
+    def get_root(self):
+        return self.get_root_node().url
+
+    def set_root(self, url):
+        self.add_node(url)
+        node = self.get_node(url)
+        self.root = node
+
+    ## index
+
+    def add_node(self, url):
+        if url not in self.index:
+            self.index[url] = Node(url)
+
+    def get_node(self, url):
+        return self.index[url]
+
+    ## index public
+
+    def get_iterurls(self):
+        return self.index.keys()
+
+    def add_url(self, url, children):
+        self.add_node(url)
+        self.add_incoming(url, children)
+        self.add_outgoing(url, children)
+
+    def add_ref(self, url, new_url):
+        self.index[new_url] = self.index[url]
+        self.add_alias(url, new_url)
+
+    def __contains__(self, url):
+        return url in self.index
+
+    def __len__(self):
+        return len(self.index)
+
+    def __str__(self):
+        return ", ".join(u for u in self.get_iterurls())
+
+    ## incoming
+
+    def add_incoming(self, url, children):
+        node = self.get_node(url)
+        for c_url in children:
+            self.add_node(c_url)
+            n = self.get_node(c_url)
+            n.incoming[url] = node
+
+    def get_iterincoming(self, url):
+        return (u for u in self.get_node(url).incoming)
+
+    def len_incoming(self, url):
+        return len(self.get_node(url).incoming)
+
+    ## outgoing
+
+    def add_outgoing(self, url, children):
+        node = self.get_node(url)
+        for c_url in children:
+            self.add_node(c_url)
+            n = self.get_node(c_url)
+            node.outgoing[c_url] = n
+
+    def get_iteroutgoing(self, url):
+        return (u for u in self.get_node(url).outgoing)
+
+    ## aliases
+
+    def add_alias(self, url, url_alias):
+        if not url == url_alias:
+            self.get_node(url).aliases.append(url_alias)
+
+    def get_iteraliases(self, url):
+        return (a for a in self.get_node(url).aliases)
+
+    def len_aliases(self, url):
+        return len(self.get_node(url).aliases)
+
+
 def save_web(wb, filename, dir=None):
     (base, ext) = os.path.splitext(filename)
     if ext == '.web':
@@ -258,7 +363,7 @@ if __name__ == "__main__":
     (opts, args) = io.parse_args(parser)
     try:
         if opts.test:
-            wb = Web()
+            wb = SqliteWeb()
 
             wb.set_root('a')
             wb.add_ref('a', 'adupe')
