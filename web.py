@@ -8,11 +8,18 @@ import shcolor
 
 
 class Node(object):
-    def __init__(self, url):
+    def __init__(self, url, id=None):
         self._url = url
         self._incoming = {}
         self._outgoing = {}
         self._aliases = [url]
+        if id:
+            self.id = id
+        else:
+            self.id = hash(self)
+
+    def __cmp__(self, another):
+        return cmp(self.id, another.id)
 
 class Web(object):
     def __init__(self, url_root=None):
