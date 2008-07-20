@@ -79,10 +79,6 @@ class Web(object):
         self.add_incoming(url, children)
         self.add_outgoing(url, children)
 
-    def add_ref(self, url, new_url):
-        self.index[new_url] = self.index[url]
-        self.add_alias(url, new_url)
-
     def __contains__(self, url):
         return url in self.index
 
@@ -121,7 +117,8 @@ class Web(object):
 
     ## aliases
 
-    def add_alias(self, url, url_alias):
+    def add_ref(self, url, url_alias):
+        self.index[url_alias] = self.index[url]
         if not url == url_alias:
             self.get_node(url).aliases.append(url_alias)
 
@@ -233,20 +230,20 @@ class Web(object):
 
 class SqliteWeb(Web):
     schema = """
-    CREATE TABLE IF NOT EXISTS node
-        (nodeid INTEGER PRIMARY KEY, url TEXT UNIQUE, is_root BOOLEAN DEFAULT FALSE);
-    CREATE TABLE IF NOT EXISTS node_in  (docid INTEGER, linkid INTEGER);
-    CREATE TABLE IF NOT EXISTS node_out (docid INTEGER, linkid INTEGER);
-    CREATE TABLE IF NOT EXISTS node_alias (nodeid INTEGER, url TEXT PRIMARY KEY);
-    """
-    """
-        
+    CREATE TABLE IF NOT EXISTS node (nodeid INTEGER, url TEXT PRIMARY KEY, is_root BOOLEAN);
+    CREATE TABLE IF NOT EXISTS node_in  (nodeurl TEXT, linkurl TEXT);
+    CREATE TABLE IF NOT EXISTS node_out (nodeurl TEXT, linkurl TEXT);
+
+    CREATE UNIQUE INDEX IF NOT EXISTS node_in_index  ON node_in  (nodeurl, linkurl);
+    CREATE UNIQUE INDEX IF NOT EXISTS node_out_index ON node_out (nodeurl, linkurl);
     """
 
     def __init__(self, file=":memory", *a, **k):
         Web.__init__(self, *a, **k)
         self.file = file
+        self.connect()
 
+    def connect(self):
         self.conn = sqlite3.connect(self.file, isolation_level=None)
         self.conn.row_factory = sqlite3.Row
         self.conn.text_factory = str
@@ -254,109 +251,127 @@ class SqliteWeb(Web):
 
         self.cur.executescript(self.__class__.schema)
 
+    def disconnect(self):
+        self.conn.close()
+
+    def db_exec(self, q, *args):
+        self.cur.execute(q, *args)
+
+    def db_tuple(self, q, *args):
+        self.cur.execute(q, *args)
+        res = self.cur.fetchone()
+        if res:
+            return res
+
+    def db_single(self, q, *args):
+        res = self.db_tuple(q, *args)
+        if res:
+            return res[0]
+
+    def db_iter(self, q, *args):
+        self.cur.execute(q, *args)
+        res = self.cur.fetchall()
+        for r in res:
+            yield r[0]
+
     ## root
 
     def get_root_node(self):
-        self.cur.execute('SELECT * FROM root WHERE is_root=?', (True,))
-        res = self.cur.fetchone()
+        res = self.db_tuple('SELECT * FROM node WHERE is_root=?', (True,))
         return Node(res['url'], id=res['nodeid'])
-        #return self.root
 
     def get_root(self):
         return self.get_root_node().url
 
     def set_root(self, url):
-        self.cur.execute('UPDATE node SET is_root=?', (False,))
-        self.cur.execute('INSERT OR REPLACE INTO node VALUES (NULL, ?, ?)', (url, True))
-        #node = self.get_node(url)
-        #self.root = node
+        self.add_node(url)
+        self.db_exec('UPDATE node SET is_root=?', (False,))
+        self.db_exec('UPDATE node SET is_root=? WHERE url=?', (True, url))
 
     ## index
 
     def add_node(self, url):
-        self.cur.execute('INSERT OR IGNORE INTO node VALUES (NULL, ?, NULL)', (url,))
-        #if url not in self.index:
-        #    self.index[url] = Node(url)
+        q = '''INSERT OR IGNORE INTO node VALUES
+            (IFNULL((SELECT MAX(nodeid) FROM node),0)+1, ?, ?) '''
+        self.db_exec(q, (url, False))
 
     def get_node(self, url):
-        self.cur.execute('SELECT * FROM node WHERE url=?', (url,))
-        res = self.cur.fetchone()
+        res = self.db_tuple('SELECT * FROM node WHERE url=?', (url,))
         return Node(res['url'], id=res['nodeid'])
-        #return self.index[url]
 
     ## index public
 
     def get_iterurls(self):
-        return self.index.keys()
-
-    def add_url(self, url, children):
-        self.add_node(url)
-        self.add_incoming(url, children)
-        self.add_outgoing(url, children)
-
-    def add_ref(self, url, new_url):
-        self.index[new_url] = self.index[url]
-        self.add_alias(url, new_url)
+        return (u for u in self.db_iter('SELECT url FROM node'))
 
     def __contains__(self, url):
-        return url in self.index
+        return self.db_single('SELECT * FROM node WHERE url=?', (url,))
 
     def __len__(self):
-        return len(self.index)
-
-    def __str__(self):
-        return ", ".join(u for u in self.get_iterurls())
+        return self.db_single('SELECT COUNT (*) FROM node')
 
     ## incoming
 
     def add_incoming(self, url, children):
-        node = self.get_node(url)
+        lst = []
         for c_url in children:
             self.add_node(c_url)
-            n = self.get_node(c_url)
-            n.incoming[url] = node
+            lst.append((url, c_url))
+        q = 'INSERT OR IGNORE INTO node_in VALUES (?, ?)'
+        self.cur.executemany(q, lst)
 
     def get_iterincoming(self, url):
-        return (u for u in self.get_node(url).incoming)
+        q = 'SELECT linkurl FROM node_in WHERE nodeurl=?'
+        return (u for u in self.db_iter(q, (url,)))
 
     def len_incoming(self, url):
-        return len(self.get_node(url).incoming)
+        q = 'SELECT COUNT(*) FROM node_in WHERE nodeurl=?'
+        return self.db_single(q, (url,))
 
     ## outgoing
 
     def add_outgoing(self, url, children):
-        node = self.get_node(url)
+        lst = []
         for c_url in children:
             self.add_node(c_url)
-            n = self.get_node(c_url)
-            node.outgoing[c_url] = n
+            lst.append((url, c_url))
+        q = 'INSERT OR IGNORE INTO node_out VALUES (?, ?)'
+        self.cur.executemany(q, lst)
 
     def get_iteroutgoing(self, url):
-        return (u for u in self.get_node(url).outgoing)
+        q = 'SELECT linkurl FROM node_out WHERE nodeurl=?'
+        return (u for u in self.db_iter(q, (url,)))
 
     ## aliases
 
-    def add_alias(self, url, url_alias):
-        if not url == url_alias:
-            self.get_node(url).aliases.append(url_alias)
+    def add_ref(self, url, url_alias):
+        q = '''INSERT OR IGNORE INTO node VALUES
+            ((SELECT nodeid FROM node WHERE url=?), ?, ?)'''
+        self.db_exec(q, (url, url_alias, False))
 
     def get_iteraliases(self, url):
-        return (a for a in self.get_node(url).aliases)
+        q = 'SELECT url FROM node WHERE nodeid=(SELECT nodeid FROM node WHERE url=?)'
+        return (u for u in self.db_iter(q, (url,)))
 
     def len_aliases(self, url):
-        return len(self.get_node(url).aliases)
+        q = '''SELECT COUNT(url) FROM node
+            WHERE nodeid=(SELECT nodeid FROM node WHERE url=?)'''
+        return self.db_single(q, (url,))
 
 
 def save_web(wb, filename, dir=None):
-    (base, ext) = os.path.splitext(filename)
-    if ext == '.web':
+    if isinstance(wb, SqliteWeb):
+        return wb.disconnect()
+    elif isinstance(wb, Web):
         return io.serialize(wb, filename, dir=None)
-    raise Exception, "Unknown web extension: %s" % ext
+    raise Exception, "Unknown web type: %s" % type(wb)
 
 def restore_web(filename, dir=None):
     (base, ext) = os.path.splitext(filename)
     if ext == '.web':
         return io.deserialize(filename, dir=None)
+    elif ext == '.websq':
+        return SqliteWeb(file=filename)
     io.write_fatal("Failed to restore web from file %s\n" % filename)
     sys.exit(1)
 
@@ -372,15 +387,24 @@ if __name__ == "__main__":
     a("--trace", metavar="<url>", help="Trace path from root to <url>")
     a("--deepest", action="store_true", help="Trace url furthest from root")
     a("--popular", action="store_true", help="Find the most referenced urls")
-    a("--test", action="store_true", help="Run trace loop test")
+    a("--test", action="store_true", help="Run testsuite")
+    a("--testmem", action="store_true", help="Run testsuite with in-memory web")
     (opts, args) = io.parse_args(parser)
     try:
-        if opts.test:
-            if os.path.exists('db.websq'): os.unlink('db.websq')
-            wb = SqliteWeb(file="db.websq")
+        if opts.test or opts.testmem:
+            file = 'testsuite'
+            if opts.test:
+                db_file = file + '.websq'
+                wb = SqliteWeb(file=db_file)
+            else:
+                db_file = file + '.web'
+                wb = Web()
 
-            wb.set_root('a')
+            if os.path.exists(db_file): 
+                os.unlink(db_file)
+
             wb.set_root('b')
+            wb.set_root('a')
             wb.add_ref('a', 'adupe')
             wb.add_url('a', ['b'])
             wb.add_url('b', ['c'])
@@ -388,8 +412,8 @@ if __name__ == "__main__":
             wb.add_incoming('d', 'e')
             wb.add_incoming('e', 'd')   # create loop b <-> c
 
-            save_web(wb, "testsuite.web")
-            wb = restore_web("testsuite.web")
+            save_web(wb, db_file)
+            wb = restore_web(db_file)
 
             io.write_err("Root :  %s\n" % wb.get_root())
             io.write_err("Web  :  %s\n" % wb)
