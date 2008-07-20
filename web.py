@@ -9,6 +9,9 @@ import io
 import shcolor
 
 
+EXT_MEM = '.web'
+EXT_SQL = '.websq'
+
 class Node(object):
     def __init__(self, url, id=None):
         self.url = url
@@ -247,7 +250,12 @@ class SqliteWeb(Web):
 
     def __init__(self, file=":memory:", *a, **k):
         Web.__init__(self, *a, **k)
+
+        (base, ext) = os.path.splitext(file)
+        if not ext:
+            file = file + EXT_SQL
         self.file = file
+
         self.connect()
 
     def connect(self):
@@ -368,6 +376,7 @@ class SqliteWeb(Web):
 
 def save_web(wb, filename, dir=None):
     if isinstance(wb, SqliteWeb):
+        return
         return wb.disconnect()
     elif isinstance(wb, Web):
         return io.serialize(wb, filename, dir=None)
@@ -380,9 +389,9 @@ def restore_web(filename, dir=None):
         sys.exit(1)
 
     (base, ext) = os.path.splitext(filename)
-    if ext == '.web':
+    if ext == EXT_MEM:
         return io.deserialize(filename, dir=None)
-    elif ext == '.websq':
+    elif ext == EXT_SQL:
         return SqliteWeb(file=filename)
     io.write_fatal("Failed to restore web from file %s\n" % filename)
     sys.exit(1)
@@ -406,8 +415,8 @@ if __name__ == "__main__":
         if opts.test or opts.testmem:
             testfile = 'testsuite'
 
-            mem_file = testfile + '.web'
-            sql_file = testfile + '.websq'
+            mem_file = testfile + EXT_MEM
+            sql_file = testfile + EXT_SQL
             for f in (mem_file, sql_file):
                 if os.path.exists(f):
                     os.unlink(f)

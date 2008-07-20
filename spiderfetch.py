@@ -18,17 +18,25 @@ import web
 
 
 class SpiderFetch(object):
-    def __init__(self):
-        self.save_interval = 60*30
+    def __init__(self, starturl=None):
+        self.save_interval = 1*30
         self.last_save = time.time()
+
+        self.starturl = starturl
 
         self.wb = None
         self.queue = None
         self.rules = None
 
+    def get_session_filename(self):
+        hostname = urlrewrite.get_hostname(self.starturl)
+        return urlrewrite.hostname_to_filename(hostname)
+
+    def new_session(self):
+        return web.SqliteWeb(file=self.get_session_filename())
+
     def save_session(self):
-        hostname = urlrewrite.get_hostname(self.wb.get_root())
-        filename = urlrewrite.hostname_to_filename(hostname)
+        filename = self.get_session_filename()
         io.write_err("Saving session to %s ..." %
              shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
         web.save_web(self.wb, filename + ".web", dir=io.LOGDIR)
@@ -46,8 +54,7 @@ class SpiderFetch(object):
             self.last_save = t
 
     def restore_session(self, url):
-        hostname = urlrewrite.get_hostname(url)
-        filename = urlrewrite.hostname_to_filename(hostname)
+        filename = self.get_session_filename()
         if (io.file_exists(filename + ".session", dir=io.LOGDIR) and
             io.file_exists(filename + ".web", dir=io.LOGDIR)):
             io.write_err("Restoring session from %s ..." %
@@ -184,7 +191,7 @@ class SpiderFetch(object):
         return fetch_queue, spider_queue
 
     def run(self):
-        assert self.queue and self.wb and self.rules
+        assert self.queue and isinstance(self.wb, web.Web) and self.rules
 
         outer_queue = self.queue
         for rule in self.rules:
@@ -227,12 +234,12 @@ if __name__ == "__main__":
         if opts.depth:
             os.environ["DEPTH"] = str(opts.depth)
 
-        sp = SpiderFetch()
         url = args[0]
+        sp = SpiderFetch(starturl=url)
 
         sp.restore_session(url)
         sp.queue = sp.queue or recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
-        sp.wb = sp.wb or web.Web(url)
+        sp.wb = sp.wb or sp.new_session()
 
         if opts.recipe:
             sp.rules = recipe.load_recipe(opts.recipe, url)
