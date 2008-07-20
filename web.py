@@ -71,7 +71,7 @@ class Web(object):
     ## index public
 
     def get_iterurls(self):
-        return self.index.keys()
+        return (u for u in self.index)
 
     def add_url(self, url, children):
         self.add_node(url)
