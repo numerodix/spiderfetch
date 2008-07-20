@@ -40,7 +40,7 @@ class SpiderFetch(object):
         ext = web.get_ext(self.wb)
 
         io.write_err("Saving session to %s ..." %
-             shcolor.color(shcolor.YELLOW, filename+".{%s,session}" % ext))
+             shcolor.color(shcolor.YELLOW, filename+"{%s,.session}" % ext))
         web.save_web(self.wb, filename + ext, dir=io.LOGDIR)
 
         if self.queue:
@@ -61,7 +61,7 @@ class SpiderFetch(object):
     def restore_session(self, url):
         filename = self.get_session_filename()
 
-        session, webmem, websql, ext = True, True, True, None
+        session, webmem, websql, ext = False, False, False, None
         if io.file_exists(filename + ".session", dir=io.LOGDIR):
             session = True
         if io.file_exists(filename + web.EXT_MEM, dir=io.LOGDIR):
@@ -73,7 +73,7 @@ class SpiderFetch(object):
        
         if session and (webmem or websql):
             io.write_err("Restoring session from %s ..." %
-                 shcolor.color(shcolor.YELLOW, filename+".{%s,session}" % ext))
+                 shcolor.color(shcolor.YELLOW, filename+"{%s,.session}" % ext))
 
             q = io.deserialize(filename + ".session", dir=io.LOGDIR)
             self.queue = recipe.overrule_records(q)
@@ -174,8 +174,8 @@ class SpiderFetch(object):
             except (fetch.DuplicateUrlWarning, fetch.UrlRedirectsOffHost):
                 pass
             except KeyboardInterrupt:
-                q = self.queue[self.queue.index(record):]
-                q.extend(newqueue)
+                self.queue = self.queue[self.queue.index(record):]
+                self.queue.extend(newqueue)
                 self.save_session()
                 sys.exit(1)
             except Exception, exc:
