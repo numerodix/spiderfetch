@@ -232,18 +232,11 @@ class Web(object):
 
 class SqliteWeb(Web):
     schema = """
-    CREATE TABLE IF NOT EXISTS root (nodeid INTEGER PRIMARY KEY);
-    CREATE TABLE IF NOT EXISTS node (nodeid INTEGER PRIMARY KEY, url TEXT UNIQUE);
+    CREATE TABLE IF NOT EXISTS node
+        (nodeid INTEGER PRIMARY KEY, url TEXT UNIQUE, is_root BOOLEAN DEFAULT FALSE);
     CREATE TABLE IF NOT EXISTS node_in  (docid INTEGER, linkid INTEGER);
     CREATE TABLE IF NOT EXISTS node_out (docid INTEGER, linkid INTEGER);
     CREATE TABLE IF NOT EXISTS node_alias (nodeid INTEGER, url TEXT PRIMARY KEY);
-
-    CREATE VIEW IF NOT EXISTS rootview AS
-        SELECT root.nodeid AS nodeid, url FROM root JOIN node ON root.nodeid;
-    CREATE TRIGGER set_root INSERT ON rootview
-        BEGIN
-            INSERT INTO node VALUES (NULL, rootview.url);
-        END;
     """
     """
         
@@ -263,7 +256,7 @@ class SqliteWeb(Web):
     ## root
 
     def get_root_node(self):
-        self.cur.execute('SELECT * FROM rootview')
+        self.cur.execute('SELECT * FROM root WHERE is_root=?', (True,))
         res = self.cur.fetchone()
         return Node(res['url'], id=res['nodeid'])
         #return self.root
@@ -272,17 +265,15 @@ class SqliteWeb(Web):
         return self.get_root_node().url
 
     def set_root(self, url):
-        self.add_node(url)
-        node = self.get_node(url)
-        self.cur.execute('DELETE FROM ROOT')
-        self.cur.execute('INSERT INTO root VALUES (?)', (node.id,))
+        self.cur.execute('UPDATE node SET is_root=?', (False,))
+        self.cur.execute('INSERT OR REPLACE INTO node VALUES (NULL, ?, ?)', (url, True))
         #node = self.get_node(url)
         #self.root = node
 
     ## index
 
     def add_node(self, url):
-        self.cur.execute('INSERT OR IGNORE INTO node VALUES (NULL, ?)', (url,))
+        self.cur.execute('INSERT OR IGNORE INTO node VALUES (NULL, ?, NULL)', (url,))
         #if url not in self.index:
         #    self.index[url] = Node(url)
 
@@ -388,6 +379,7 @@ if __name__ == "__main__":
             wb = SqliteWeb(file="db.websq")
 
             wb.set_root('a')
+            wb.set_root('b')
             wb.add_ref('a', 'adupe')
             wb.add_url('a', ['b'])
             wb.add_url('b', ['c'])
