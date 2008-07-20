@@ -323,7 +323,7 @@ class SqliteWeb(Web):
         lst = []
         for c_url in children:
             self.add_node(c_url)
-            lst.append((url, c_url))
+            lst.append((c_url, url))
         q = 'INSERT OR IGNORE INTO node_in VALUES (?, ?)'
         self.cur.executemany(q, lst)
 
@@ -426,7 +426,7 @@ if __name__ == "__main__":
             wb.add_url('b', ['c'])
             wb.add_url('d', ['e'])      # disconnected from root
             wb.add_incoming('d', 'e')
-            wb.add_incoming('e', 'd')   # create loop b <-> c
+            wb.add_incoming('e', 'd')   # create loop d <-> e
 
             io.write_err("Root :  %s\n" % wb.get_root())
             io.write_err("Web  :  %s\n" % wb)
