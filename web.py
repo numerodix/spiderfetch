@@ -256,6 +256,7 @@ class SqliteWeb(Web):
 
         self.connect()
 
+        # setup db before we touch any datastructures
         Web.__init__(self, *a, **k)
 
     def connect(self):
