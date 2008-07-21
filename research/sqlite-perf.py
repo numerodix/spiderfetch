@@ -84,7 +84,7 @@ def one_transaction(conn, cur, lst):
 def collect(f, f_args, execs):
     ts = []
     for i in xrange(execs):
-        write_err("Running '%s(%s)', %s/%s... " % (f.__name__, f_args[0], i+1, execs))
+        write_err("Running %s(%s), %s/%s... " % (f.__name__, f_args[0], i+1, execs))
         t = f(*f_args)
         ts.append(t)
         write_err("%s s\n" % t)
@@ -92,13 +92,18 @@ def collect(f, f_args, execs):
 
 def write_conclusion(timings):
     timings.sort()
+    def ffmt(f):
+        s = "%.4f" % f
+        if s[0] == '0':
+            s = s[1:]
+        return s
     def fmt(f, low, av, high):
         return ("%s  %s  %s  %s\n" % 
-        (f.ljust(25), low[:10].rjust(10), av[:10].rjust(10), high[:10].rjust(10)))
+        (f.ljust(30), low[:12].rjust(12), av[:12].rjust(12), high[:12].rjust(12)))
     write_err('\n')
     write_err(fmt('FUNCTION', 'LOWEST', 'AVERAGE', 'HIGHEST'))
     for (av, low, high, f) in timings:
-        write_err(fmt(f.__name__, str(low), str(av), str(high)))
+        write_err(fmt(f.__name__, ffmt(low), ffmt(av), ffmt(high)))
 
 def main():
     records = 1000
@@ -106,8 +111,8 @@ def main():
 
     timings = [
         multiple,
-        one_transaction,
         single_unsynced,
+        one_transaction,
         single_synced,
     ]
     
