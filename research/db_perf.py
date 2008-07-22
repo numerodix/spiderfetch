@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import functools
+import hashlib
 import os
 import random
 import sqlite3
@@ -13,11 +14,10 @@ import MySQLdb
 
 schema_drop='drop table node;'
 schema_clear='delete from node;'
-schema='''
-create table if not exists node (nodeid integer auto_increment primary key, url varchar(200) unique);
-create unique index if not exists idx_url on node (url);
+schema_create='''
+create table if not exists node (nodeid integer auto_increment primary key, url text);
 '''
-schema_create='create table if not exists node (url integer primary key);'
+schema_create='create table if not exists node (url text)'
 
 def write_err(s):
     sys.stderr.write(s)
@@ -83,19 +83,23 @@ db = None
 def get_list(ln, tuplewrap=False):
     lst = []
     def str_ascii(mi, ma):
-        for i in xrange(ln):
-            s = ""
-            for j in xrange(random.randrange(mi, ma)):
-                c = random.randrange(97,123)  # a lowercase letter
-                s += chr(c)
+        s = ""
+        for j in xrange(random.randrange(mi, ma)):
+            c = random.randrange(97,123)  # a lowercase letter
+            s += chr(c)
+        return s
     def integer(bits):
         ceil = 2**bits
         mid = 2**(bits/2)
         return random.randint(mid, ceil)
+    def hash_md5(s):
+        md5 = hashlib.md5()
+        md5.update(s)
+        return md5.hexdigest()
 
     for i in xrange(ln):
-        #s = str_ascii(20, 150)
-        s = integer(4*8)
+        s = str_ascii(20, 150)
+        #s = integer(7*8)
         if tuplewrap:
             s = (s,)
         lst.append(s)
@@ -125,20 +129,20 @@ def timed(tuplewrap=False):
 
 @timed()
 def single_synced(db, lst):
-    q = db.fill_query('insert or ignore into node values (%%s%%)')
+    q = db.fill_query('insert into node values (%%s%%)')
     for s in lst:
         db.cur.execute(q, (s,))
         db.conn.commit()
 
 @timed()
 def single_unsynced(db, lst):
-    q = db.fill_query('insert or ignore into node values (%%s%%)')
+    q = db.fill_query('insert into node values (%%s%%)')
     for s in lst:
         db.cur.execute(q, (s,))
 
 @timed(tuplewrap=True)
 def multiple(db, lst):
-    q = db.fill_query('insert or ignore into node values (%%s%%)')
+    q = db.fill_query('insert into node values (%%s%%)')
     db.cur.executemany(q, lst)
 
 @timed()
@@ -163,16 +167,14 @@ def uniquify(db, lst):
         db.cur.execute(s)
 
 
-def collect(f, f_args, execs):
-    ts = []
-    for i in xrange(execs):
-        timestamp = time.strftime('%H:%M', time.localtime())
-        write_err("%s  Running %s(%s), %s/%s... " %
-                  (timestamp, f.__name__, f_args[0], i+1, execs))
-        t = f(*f_args)
-        ts.append(t)
-        write_err("%s s\n" % t)
-    return ts
+def collect(f, f_args, repetitions):
+    (this_rep, reps) = repetitions
+    timestamp = time.strftime('%H:%M', time.localtime())
+    write_err("%s  Running %s(%s), %s/%s... " %
+              (timestamp, f.__name__, f_args[0], this_rep, reps))
+    t = f(*f_args)
+    write_err("%s s\n" % t)
+    return t
 
 def write_conclusion(timings):
     timings.sort()
@@ -187,27 +189,37 @@ def write_conclusion(timings):
     write_err('\n')
     write_err(fmt('FUNCTION', 'LOWEST', 'AVERAGE', 'HIGHEST'))
     for (av, low, high, f) in timings:
-        write_err(fmt(f.__name__, ffmt(low), ffmt(av), ffmt(high)))
+        write_err(fmt(f, ffmt(low), ffmt(av), ffmt(high)))
 
 def main():
     records = 10000
-    repetitions = 100
+    repetitions = 500
 
-    timings = [
-        multiple,
-#        single_unsynced,
-#        one_transaction,
-#        single_synced,
+    cycle = [
+        (multiple, records, 1),
+#        (single_unsynced, records, 1),
+#        (one_transaction, records, 1),
+#        (single_synced, records, 1),
+        (uniquify, 0, 10),
     ]
+    timings = {}
     
-    for f in timings:
-        ts = collect(f, (records,), repetitions)
+    for rep in xrange(1, repetitions+1):
+        for (f, recs, per_rep) in cycle:
+            if rep % per_rep == 0:
+                t = collect(f, (recs,), (rep, repetitions))
+                if f.__name__ not in timings:
+                    timings[f.__name__] = []
+                timings[f.__name__].append(t)
+    
+    tuples = []
+    for (n, ts) in timings.items():
         av = sum(ts) / len(ts)
         low = min(ts)
         high = max(ts)
-        timings[timings.index(f)] = (av, low, high, f)
-    #collect(uniquify, (1,), 1)
-    write_conclusion(timings)
+        tuples.append((av, low, high, n))
+    
+    write_conclusion(tuples)
     
 
 
@@ -217,8 +229,8 @@ if __name__ == "__main__":
     else:
         (fp, dbfile) = get_tempfile()
         os.close(fp)
-    #db = MysqlDatabase('web', 'root', '')
-    db = SqliteDatabase(dbfile)
+    db = MysqlDatabase('web', 'root', '')
+    #db = SqliteDatabase(dbfile)
     db.connect(create=True, clear=True)
 
     main()
