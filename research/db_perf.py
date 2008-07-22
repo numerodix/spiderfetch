@@ -17,7 +17,9 @@ schema_clear='delete from node;'
 schema_create='''
 create table if not exists node (nodeid integer auto_increment primary key, url text);
 '''
-schema_create='create table if not exists node (url text)'
+schema_create='''
+create table if not exists node (url1 text, url2 text);
+'''
 
 def write_err(s):
     sys.stderr.write(s)
@@ -82,14 +84,15 @@ class SqliteDatabase(Database):
 db = None
 
 
-def get_list(ln, tuplewrap=False):
+def random_str_ascii(mi, ma):
+    s = ""
+    for j in xrange(random.randrange(mi, ma)):
+        c = random.randrange(97,123)  # a lowercase letter
+        s += chr(c)
+    return s
+
+def get_list(ln):
     lst = []
-    def str_ascii(mi, ma):
-        s = ""
-        for j in xrange(random.randrange(mi, ma)):
-            c = random.randrange(97,123)  # a lowercase letter
-            s += chr(c)
-        return s
     def integer(bits):
         ceil = 2**bits
         mid = 2**(bits/2)
@@ -100,30 +103,30 @@ def get_list(ln, tuplewrap=False):
         return md5.hexdigest()
 
     for i in xrange(ln):
-        s = str_ascii(20, 150)
+        s = random_str_ascii(20, 150)
+        s2 = random_str_ascii(20, 150)
         #s = integer(7*8)
-        if tuplewrap:
-            s = (s,)
-        lst.append(s)
+        t = (s,s2)
+        lst.append(t)
     return lst
 
 
-def timed(tuplewrap=False):
+def timed():
     def wrap(f):
         @functools.wraps(f)
         def new_f(*args, **kw):
             global db
-            db.connect()
+            #db.connect()
 
             ln = args[0]
-            lst = get_list(ln, tuplewrap=tuplewrap)
+            lst = get_list(ln)
 
             ts = time.time()
             f(db, lst)
             db.conn.commit()
             dur = time.time() - ts
 
-            db.disconnect()
+            #db.disconnect()
             return dur
         return new_f
     return wrap
@@ -133,18 +136,18 @@ def timed(tuplewrap=False):
 def single_synced(db, lst):
     q = db.fill_query('insert or ignore into node values (%%s%%)')
     for s in lst:
-        db.cur.execute(q, (s,))
+        db.cur.execute(q, *s)
         db.conn.commit()
 
 @timed()
 def single_unsynced(db, lst):
     q = db.fill_query('insert or ignore into node values (%%s%%)')
     for s in lst:
-        db.cur.execute(q, (s,))
+        db.cur.execute(q, *s)
 
-@timed(tuplewrap=True)
+@timed()
 def multiple(db, lst):
-    q = db.fill_query('insert or ignore into node values (%%s%%)')
+    q = db.fill_query('insert or ignore into node values (%%s%%, %%s%%)')
     db.cur.executemany(q, lst)
 
 @timed()
@@ -160,7 +163,7 @@ def one_transaction(db, lst):
 @timed()
 def uniquify(db, lst):
     q = '''
-    create table temp (url text);
+    create table temp (url1 text, url2 text);
     insert into temp select distinct * from node;
     drop table node;
     alter table temp rename to node;
@@ -195,7 +198,7 @@ def write_conclusion(timings):
 
 def main():
     records = 10000
-    repetitions = 500
+    repetitions = 800
 
     cycle = [
         (multiple, records, 1),
