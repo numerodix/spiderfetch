@@ -64,6 +64,7 @@ class MysqlDatabase(Database):
         Database.connect(self, *args, **kw)
 
     def fill_query(self, q):
+        q = q.replace('insert or ignore', 'insert ignore')
         return q.replace('%%s%%', '%s')
 
 class SqliteDatabase(Database):
@@ -76,6 +77,7 @@ class SqliteDatabase(Database):
         Database.connect(self, **kw)
 
     def fill_query(self, q):
+        q = q.replace('insert ignore', 'insert or ignore')
         return q.replace('%%s%%', '?')
 db = None
 
@@ -129,20 +131,20 @@ def timed(tuplewrap=False):
 
 @timed()
 def single_synced(db, lst):
-    q = db.fill_query('insert into node values (%%s%%)')
+    q = db.fill_query('insert or ignore into node values (%%s%%)')
     for s in lst:
         db.cur.execute(q, (s,))
         db.conn.commit()
 
 @timed()
 def single_unsynced(db, lst):
-    q = db.fill_query('insert into node values (%%s%%)')
+    q = db.fill_query('insert or ignore into node values (%%s%%)')
     for s in lst:
         db.cur.execute(q, (s,))
 
 @timed(tuplewrap=True)
 def multiple(db, lst):
-    q = db.fill_query('insert into node values (%%s%%)')
+    q = db.fill_query('insert or ignore into node values (%%s%%)')
     db.cur.executemany(q, lst)
 
 @timed()
