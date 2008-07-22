@@ -10,8 +10,10 @@ import time
 
 
 schema='''
-create table node (nodeid integer primary key, url text unique)
+create table if not exists node (nodeid integer primary key, url text);
+create unique index if not exists idx_url on node (url);
 '''
+schema='create table if not exists node (nodeid integer primary key, url text);'
 
 def write_err(s):
     sys.stderr.write(s)
@@ -32,26 +34,25 @@ def get_list(ln, tuplewrap=False):
         lst.append(s)
     return lst
 
+dbfile = None
 def timed(tuplewrap=False):
     def wrap(f):
         @functools.wraps(f)
         def new_f(*args, **kw):
-            (fp, dbfile) = get_tempfile()
-            try:
-                conn = sqlite3.connect(dbfile)
-                cur = conn.cursor()
-                cur.execute(schema)
+            global dbfile
+            conn = sqlite3.connect(dbfile)
+            cur = conn.cursor()
+            cur.executescript(schema)
 
-                ln = args[0]
-                lst = get_list(ln, tuplewrap=tuplewrap)
+            ln = args[0]
+            lst = get_list(ln, tuplewrap=tuplewrap)
 
-                ts = time.time()
-                f(conn, cur, lst)
-                conn.commit()
-                dur = time.time() - ts
-            finally:
-                os.close(fp)
-                os.unlink(dbfile)
+            ts = time.time()
+            f(conn, cur, lst)
+            conn.commit()
+            dur = time.time() - ts
+
+            conn.close()
             return dur
         return new_f
     return wrap
@@ -84,7 +85,9 @@ def one_transaction(conn, cur, lst):
 def collect(f, f_args, execs):
     ts = []
     for i in xrange(execs):
-        write_err("Running %s(%s), %s/%s... " % (f.__name__, f_args[0], i+1, execs))
+        timestamp = time.strftime('%H:%M', time.localtime())
+        write_err("%s  Running %s(%s), %s/%s... " %
+                  (timestamp, f.__name__, f_args[0], i+1, execs))
         t = f(*f_args)
         ts.append(t)
         write_err("%s s\n" % t)
@@ -106,14 +109,14 @@ def write_conclusion(timings):
         write_err(fmt(f.__name__, ffmt(low), ffmt(av), ffmt(high)))
 
 def main():
-    records = 1000
-    repetitions = 3
+    records = 10000
+    repetitions = 100
 
     timings = [
         multiple,
-        single_unsynced,
-        one_transaction,
-        single_synced,
+#        single_unsynced,
+#        one_transaction,
+#        single_synced,
     ]
     
     for f in timings:
@@ -128,4 +131,14 @@ def main():
 
 
 if __name__ == "__main__":
+    #global dbfile
+    if len(sys.argv) > 1:
+        dbfile = sys.argv[1]
+    else:
+        (fp, dbfile) = get_tempfile()
+        os.close(fp)
+
     main()
+
+    if not len(sys.argv) > 1:
+        os.unlink(dbfile)
