@@ -8,9 +8,11 @@ import sys
 import tempfile
 import time
 
+import MySQLdb
+
 
 schema='''
-create table if not exists node (nodeid integer primary key, url text);
+create table if not exists node (nodeid integer auto_increment primary key, url varchar(200) unique);
 create unique index if not exists idx_url on node (url);
 '''
 schema='create table if not exists node (nodeid integer primary key, url text);'
@@ -40,9 +42,9 @@ def timed(tuplewrap=False):
         @functools.wraps(f)
         def new_f(*args, **kw):
             global dbfile
-            conn = sqlite3.connect(dbfile)
+            conn = MySQLdb.connect(user='root', passwd='', db='web')
             cur = conn.cursor()
-            cur.executescript(schema)
+            #cur.executescript(schema)
 
             ln = args[0]
             lst = get_list(ln, tuplewrap=tuplewrap)
@@ -61,17 +63,17 @@ def timed(tuplewrap=False):
 @timed()
 def single_synced(conn, cur, lst):
     for s in lst:
-        cur.execute('insert into node values (null, ?)', (s,))
+        cur.execute('insert into node values (null, %s)', (s,))
         conn.commit()
 
 @timed()
 def single_unsynced(conn, cur, lst):
     for s in lst:
-        cur.execute('insert into node values (null, ?)', (s,))
+        cur.execute('insert into node values (null, %s)', (s,))
 
 @timed(tuplewrap=True)
 def multiple(conn, cur, lst):
-    cur.executemany('insert into node values (null, ?)', lst)
+    cur.executemany('insert into node values (null, %s)', lst)
 
 @timed()
 def one_transaction(conn, cur, lst):
