@@ -33,6 +33,9 @@ if os.environ.get("SOCKET_TIMEOUT"):
     timeout = int(os.environ.get("SOCKET_TIMEOUT"))
 socket.setdefaulttimeout(timeout)
 
+# log downloads
+os.environ["LOGGING"] = str(True)
+
 CHECKSUM_SIZE = 10*1024
 
 RETRY_WAIT = 10
@@ -394,10 +397,11 @@ class Fetcher(object):
         actual = self.format_size(self.download_size).rjust(8)
         given = self.format_size(self.totalsize).rjust(8)
         line = "%s  %s  %s  %s\n" % (status.ljust(10), actual, given, self.url)
-        if error:
-            io.savelog(line, "error_urls", "a")
-        else:
-            io.savelog(line, "log_urls", "a")
+        if not os.environ["LOGGING"] == str(False):
+            if error:
+                io.savelog(line, "error_urls", "a")
+            else:
+                io.savelog(line, "log_urls", "a")
 
     def format_size(self, size):
         if size == None:
@@ -631,6 +635,7 @@ if __name__ == "__main__":
       help="Use full path as filename to avoid name collisions")
     a("-c", "--continue", dest="cont", action="store_true", help="Resume downloads")
     a("-t", "--tries", dest="tries", type="int", action="store", help="Number of retries")
+    a("-q", "--quiet", dest="quiet", action="store_true", help="Turn off logging")
     a("--spidertest", action="store_true", help="Test spider with url")
     (opts, args) = io.parse_args(parser)
     if getattr(opts, 'cont', None):
@@ -638,6 +643,8 @@ if __name__ == "__main__":
     if getattr(opts, 'tries', None):
         if not os.environ.get("TRIES"):
             os.environ["TRIES"] = str(opts.tries)
+    if opts.quiet:
+        os.environ["LOGGING"] = str(False)
     try:
         url = args[0]
         os.environ["SILENT_REDIRECT"] = "1"
@@ -648,6 +655,8 @@ if __name__ == "__main__":
             os.close(fp) ; os.unlink(filename)
         else:
             args = list(args)
+            if len(args) <= 5:
+                os.environ["LOGGING"] = str(False)
             args.reverse()
             os.environ["ORIG_FILENAMES"] = os.environ.get("ORIG_FILENAMES") or "1"
             if opts.fullpath:
