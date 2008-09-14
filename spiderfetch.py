@@ -11,6 +11,7 @@ import filetype
 import io
 import recipe
 import shcolor
+import shutil
 import spider
 import time
 import urlrewrite
@@ -143,7 +144,7 @@ def process_records(queue, rule, wb):
                 (newqueue, wb) = qualify_urls(url, urls, rule, newqueue, wb)
 
             if record.get("mode") == fetch.Fetcher.FETCH:
-                os.rename(filename,
+                shutil.move(filename,
                   io.safe_filename(urlrewrite.url_to_filename(url)))
 
         except (fetch.DuplicateUrlWarning, fetch.UrlRedirectsOffHost):

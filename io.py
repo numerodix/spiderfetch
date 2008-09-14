@@ -73,7 +73,7 @@ def write_abort():
     write_err("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
 
 def get_tempfile():
-	return tempfile.mkstemp(prefix="."+os.path.basename(sys.argv[0])+".")
+    return tempfile.mkstemp(prefix="."+os.path.basename(sys.argv[0])+".")
 
 def safe_filename(filename, dir=None):
     if dir:
