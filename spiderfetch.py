@@ -45,16 +45,19 @@ def maybesave(wb, queue):
 def restore_session(url):
     hostname = urlrewrite.get_hostname(url)
     filename = urlrewrite.hostname_to_filename(hostname)
-    if (io.file_exists(filename + ".session", dir=io.LOGDIR) and
-        io.file_exists(filename + ".web", dir=io.LOGDIR)):
-        io.write_err("Restoring session from %s ..." %
-             shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
-        q = io.deserialize(filename + ".session", dir=io.LOGDIR)
-        q = recipe.overrule_records(q)
+    q, wb = None, None
+    if (io.file_exists(filename + ".web", dir=io.LOGDIR)):
+        io.write_err("Restoring web from %s ..." %
+             shcolor.color(shcolor.YELLOW, filename+".web"))
         wb = io.deserialize(filename + ".web", dir=io.LOGDIR)
         io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
-        return q, wb
-    return None, None
+    if (io.file_exists(filename + ".session", dir=io.LOGDIR)):
+        io.write_err("Restoring session from %s ..." %
+             shcolor.color(shcolor.YELLOW, filename+".session"))
+        q = io.deserialize(filename + ".session", dir=io.LOGDIR)
+        q = recipe.overrule_records(q)
+        io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
+    return q, wb
 
 def log_exc(exc, url, wb):
     exc_filename = io.safe_filename("exc", dir=io.LOGDIR)
