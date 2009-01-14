@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+#
+# <desc> Web spider and fetcher </desc>
 
 import os
 import re
