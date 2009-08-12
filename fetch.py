@@ -604,7 +604,6 @@ class Fetcher(object):
                         self.handle_error(err.auth)
                         return
             self.handle_error(err.url_error)
-            raise
         except socket.timeout:
             self.handle_error(err.timeout)
         except KeyboardInterrupt:
