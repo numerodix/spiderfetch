@@ -65,7 +65,7 @@ class err(object):
         self.checksum = 11
         self.no_resume = 12
 
-        self.temporal = [self.timeout, self.socket, self.http_503]
+        self.temporal = [self.timeout, self.socket, self.url_error, self.http_503]
 
     def __getattr__(self, att):
         """Disclaimer: Hackish
