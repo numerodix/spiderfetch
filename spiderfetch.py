@@ -77,7 +77,7 @@ def get_url(fetcher, wb, host_filter=False):
     have been seen before"""
     while True:
         try:
-            fetcher.launch()
+            fetcher.launch_w_tries()
             break
         except fetch.ChangedUrlWarning, e:
             url = urlrewrite.rewrite_urls(fetcher.url, [e.new_url]).next()
