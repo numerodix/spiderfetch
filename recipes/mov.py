@@ -1,5 +1,5 @@
 recipe = [
     {"spider": ".*", 
-     "dump"  : "(?i).*\.(mpe?g|avi|mov|flv|wmv).*$", 
+     "dump"  : "(?i).*\.(mpe?g|mp4|avi|mov|flv|wmv).*$", 
      "depth" : 2, },
 ]
