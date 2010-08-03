@@ -87,9 +87,9 @@ def get_code(color, bold=False, reverse=False):
     reverse = (reverse == True) and '7' or ''
     color = (color != None) and '3%s' % color.id or ''
 
-    lst = ['\033[', bold, reverse, color]
+    lst = [bold, reverse, color]
     lst = filter(lambda s: s != '', lst)
-    return ';'.join(lst) + 'm'
+    return '\033[' + ';'.join(lst) + 'm'
 
 def colorize(s, color, bold=False, reverse=False):
     '''Colorize the string'''
