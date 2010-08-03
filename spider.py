@@ -102,51 +102,19 @@ def unique(it):
 def colorize_shell(str, url=None):
     it = group_by_regex(str, url)
 
-    # (match_obj, regex_serial_id, color_id)
-    it = itertools.imap(lambda (i, m): (m, i, ansicolor.get_highlighter(i)), it)
+    # split iterator of (rx_id, match) into lists by rx_id
+    regexs = {}
+    for rx in it:
+        (rx_id, match) = rx
+        try:
+            regexs[rx_id].append(match)
+        except KeyError:
+            regexs[rx_id] = []
+            regexs[rx_id].append(match)
 
-    tuples = [e for e in it]
-    def compare(x, y):
-        ((match1, serial1, color1), (match2, serial2, color2)) = (x, y)
-        ((s1, e1), (s2, e2)) = (match1.span('url'), match2.span('url'))
-        return cmp( (s1, e2, serial2), (s2, e1, serial1) )
-    tuples.sort(cmp=compare)
-
-    # (string_pos, pos_in_tuple_list, [color_id])
-    markers = []
-    for i in tuples:
-        (match, serial, color) = i
-        (s, e) = match.span('url')
-        markers.append( (s, tuples.index(i), color) )
-        markers.append( (e, tuples.index(i), None) )
-    def compare(x, y):
-        ((pos1, serial1, _), (pos2, serial2, _)) = (x, y)
-        return cmp( (pos1, serial1), (pos2, serial2) )
-    markers.sort(cmp=compare)
-
-    # piecewise add chunks of content followed by new color, using markers
-    str_fmt = ""
-    stack = []
-    cursor = 0
-    for (pos, serial, color) in markers:
-        col = color
-        col_bold = False
-        
-        if color:   # starting new color
-            stack.append(color)
-        else:       # ending color
-            stack.pop()
-
-        if len(stack) > 1:  # more than one layer of color
-            col_bold = True
-        if len(stack) > 0:  # at least one layer
-            col = stack[-1:].pop()
-
-        str_fmt += str[cursor:pos] + ansicolor.get_code(col, bold=col_bold)
-        cursor = pos
-    str_fmt += str[cursor:-1]
-
-    return str_fmt
+    spanlists = [map(lambda m: m.span('url'), regexs[rx_id])
+                 for rx_id in sorted(regexs.keys())]
+    return ansicolor.highlight_string(str, *spanlists)
 
 
 
