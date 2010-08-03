@@ -3,8 +3,9 @@
 import pickle
 import sys
 
+from lib import ansicolor
+
 import io
-import shcolor
 
 
 class Node(object):
@@ -61,8 +62,7 @@ class Web(object):
 
     def assert_in_web(self, url):
         if url not in self.index:
-            io.write_err("Url %s not in the web\n" %
-                         shcolor.color(shcolor.YELLOW, url))
+            io.write_err("Url %s not in the web\n" % ansicolor.yellow(url))
             sys.exit(1)
         
     def print_refs(self, url, out=True):

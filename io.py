@@ -7,7 +7,7 @@ import os
 import tempfile
 import sys
 
-import shcolor
+from lib import ansicolor
 
 
 _help_header = "spiderfetch tool suite\n\n"
@@ -70,7 +70,7 @@ def write_err(s):
     sys.stderr.flush()
 
 def write_abort():
-    write_err("\n%s\n" % shcolor.color(shcolor.RED, "User aborted"))
+    write_err("\n%s\n" % ansicolor.red("User aborted"))
 
 def get_tempfile():
     return tempfile.mkstemp(prefix="."+os.path.basename(sys.argv[0])+".")

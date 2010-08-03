@@ -4,8 +4,9 @@ import itertools
 import re
 import urllib
 
+from lib import ansicolor
+
 import io
-import shcolor
 import urlrewrite
 
 
@@ -102,7 +103,7 @@ def colorize_shell(str, url=None):
     it = group_by_regex(str, url)
 
     # (match_obj, regex_serial_id, color_id)
-    it = itertools.imap(lambda (i, m): (m, i, shcolor.map(i)), it)
+    it = itertools.imap(lambda (i, m): (m, i, ansicolor.get_highlighter(i)), it)
 
     tuples = [e for e in it]
     def compare(x, y):
@@ -141,7 +142,7 @@ def colorize_shell(str, url=None):
         if len(stack) > 0:  # at least one layer
             col = stack[-1:].pop()
 
-        str_fmt += str[cursor:pos] + shcolor.code(col, bold=col_bold)
+        str_fmt += str[cursor:pos] + ansicolor.get_code(col, bold=col_bold)
         cursor = pos
     str_fmt += str[cursor:-1]
 

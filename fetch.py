@@ -10,9 +10,10 @@ import time
 import urllib
 import urlparse
 
+from lib import ansicolor
+
 import filetype
 import io
-import shcolor
 import urlrewrite
 
 
@@ -443,21 +444,21 @@ class Fetcher(object):
 
         # add formatting
         if error:
-            rate = shcolor.color(shcolor.RED, rate)
+            rate = ansicolor.red(rate)
         elif prestart or wait:
-            rate = shcolor.color(shcolor.CYAN, rate)
+            rate = ansicolor.cyan(rate)
         elif complete:
-            rate = shcolor.color(shcolor.GREEN, rate)
+            rate = ansicolor.green(rate)
         else:
-            rate = shcolor.color(shcolor.YELLOW, rate)
+            rate = ansicolor.yellow(rate)
 
         # draw progress bar
         if not (error or prestart or complete) and self.totalsize:
             c = int(self.urlwidth * self.download_size / self.totalsize)
-            url = shcolor.wrap_s(self.url_fmt, c, None, reverse=True)
+            url = ansicolor.wrap_string(self.url_fmt, c, None, reverse=True)
 
         if not self.totalsize:
-            size = shcolor.color(shcolor.YELLOW, size)
+            size = ansicolor.yellow(size)
 
         line = "%s ::  %s  " % (action, rate)
 

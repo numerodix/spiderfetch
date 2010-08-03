@@ -8,11 +8,12 @@ import sys
 import tempfile
 import traceback
 
+from lib import ansicolor
+
 import fetch
 import filetype
 import io
 import recipe
-import shcolor
 import shutil
 import spider
 import time
@@ -27,14 +28,14 @@ def save_session(wb, queue=None):
     hostname = urlrewrite.get_hostname(wb.root.url)
     filename = urlrewrite.hostname_to_filename(hostname)
     io.write_err("Saving session to %s ..." %
-         shcolor.color(shcolor.YELLOW, filename+".{web,session}"))
+         ansicolor.yellow(filename+".{web,session}"))
     io.serialize(wb, filename + ".web", dir=io.LOGDIR)
     if queue: 
         io.serialize(queue, filename + ".session", dir=io.LOGDIR)
     # only web being saved, ie. spidering complete, remove old session
     elif io.file_exists(filename + ".session", dir=io.LOGDIR):
         io.delete(filename + ".session", dir=io.LOGDIR)
-    io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
+    io.write_err(ansicolor.green("done\n"))
 
 def maybesave(wb, queue):
     global SAVE_INTERVAL
@@ -50,15 +51,15 @@ def restore_session(url):
     q, wb = None, None
     if (io.file_exists(filename + ".web", dir=io.LOGDIR)):
         io.write_err("Restoring web from %s ..." %
-             shcolor.color(shcolor.YELLOW, filename+".web"))
+             ansicolor.yellow(filename+".web"))
         wb = io.deserialize(filename + ".web", dir=io.LOGDIR)
-        io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
+        io.write_err(ansicolor.green("done\n"))
     if (io.file_exists(filename + ".session", dir=io.LOGDIR)):
         io.write_err("Restoring session from %s ..." %
-             shcolor.color(shcolor.YELLOW, filename+".session"))
+             ansicolor.yellow(filename+".session"))
         q = io.deserialize(filename + ".session", dir=io.LOGDIR)
         q = recipe.overrule_records(q)
-        io.write_err(shcolor.color(shcolor.GREEN, "done\n"))
+        io.write_err(ansicolor.green("done\n"))
     return q, wb
 
 def log_exc(exc, url, wb):
@@ -239,7 +240,7 @@ if __name__ == "__main__":
         queue = q or recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
         wb = w or web.Web(url)
     except recipe.PatternError, e:
-        io.write_err(shcolor.color(shcolor.RED, "%s\n" % e))
+        io.write_err(ansicolor.red("%s\n" % e))
         sys.exit(1)
     except IndexError:
         io.opts_help(None, None, None, parser)
