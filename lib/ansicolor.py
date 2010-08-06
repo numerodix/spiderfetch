@@ -91,9 +91,9 @@ def get_code(color, bold=False, reverse=False):
         fmt = '0;7'
     elif bold:
         fmt = '0;1'
-    color = (color != None) and '3%s' % color.id or ''
+    color = (color != None) and ';3%s' % color.id or ''
 
-    return '\033[' + fmt + ';' + color + 'm'
+    return '\033[' + fmt + color + 'm'
 
 def colorize(s, color, bold=False, reverse=False):
     '''Colorize the string'''
