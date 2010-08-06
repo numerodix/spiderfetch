@@ -16,6 +16,7 @@ import itertools
 import os
 import sys
 
+# Don't write escapes to dumb terminals
 _disabled = (not os.environ.get("TERM")) or (os.environ.get("TERM") == "dumb")
 
 
@@ -83,13 +84,16 @@ def get_code(color, bold=False, reverse=False):
     if _disabled:
         return ""
 
-    bold = (bold == True) and '1' or '0'
-    reverse = (reverse == True) and '7' or ''
+    fmt = '0;0'
+    if bold and reverse:
+        fmt = '1;7'
+    elif reverse:
+        fmt = '0;7'
+    elif bold:
+        fmt = '0;1'
     color = (color != None) and '3%s' % color.id or ''
 
-    lst = [bold, reverse, color]
-    lst = filter(lambda s: s != '', lst)
-    return '\033[' + ';'.join(lst) + 'm'
+    return '\033[' + fmt + ';' + color + 'm'
 
 def colorize(s, color, bold=False, reverse=False):
     '''Colorize the string'''
@@ -115,47 +119,61 @@ def highlight_string(s, *spanlists):
     # pair span with color -> (span, color)
     tuples = []
     for spanlist in spanlists:
-        get_color = lambda spanlist: get_highlighter(spanlists.index(spanlist))
-        tuples.extend( [(span, get_color(spanlist)) for span in spanlist] )
+        get_id = lambda spanlist: spanlists.index(spanlist)
+        get_color = lambda spanlist: get_highlighter(get_id(spanlist))
+        tuples.extend( [(span, get_color(spanlist), get_id(spanlist))
+                        for span in spanlist] )
 
-    # sort by start position
-    tuples.sort(key=lambda ((begin,end),color): begin)
-
-    # produce list of (pos,color) pairs
-    # (begin, Red)   # start new color
-    # (end, None)    # end current color
+    # produce list of (pos,color,start_end) pairs
+    # (begin, Red, True)   # start new color
+    # (end, Red, False)    # end current color
     markers = []
     for i in tuples:
-        (begin,end),color = i
-        markers.append( (begin, color) )
-        markers.append( (end, None) )
-    markers.sort(key=lambda (pos,color): pos)
+        (begin,end),color,list_id = i
+        markers.append( (begin, color, True, list_id) )
+        markers.append( (end, color, False, list_id) )
+    markers.sort(key=lambda (pos,color,start_end,list_id): pos)
 
-    cursor = 0
+    # produce list of (pos, color, layer) pairs
+    codes = []
     stack = []
-    segments = []
-    for (pos, color) in markers:
-        fmt_color = color
-        fmt_bold = False
-        fmt_reverse = False
-
-        if color:
-            stack.append(color)
+    for (pos, color, start_end, list_id) in markers:
+        # stack invariant :  list_id1 < list_id2   =>   i1 < i2
+        if start_end:
+            inserted = False
+            for (i, (c,id)) in enumerate(stack):
+                if list_id < id:
+                    stack.insert(i, (color, list_id) )
+                    inserted = True
+                    break
+            if not inserted:
+                stack.append( (color, list_id) )
         else:
-            stack.pop()
+            stack.remove( (color,list_id) )
 
+        cur_color = None
         if len(stack) > 0:
-            fmt_color = stack[-1:].pop()
-        if len(stack) == 2:
-            fmt_bold = True
-        if len(stack) == 3:
-            fmt_reverse = True
-        if len(stack) == 4:
-            fmt_bold = True
-            fmt_reverse = True
+            (cur_color, _) = stack[-1]
+
+        codes.append( (pos, cur_color, len(stack)) )
+
+    # apply codes to the string
+    cursor = 0
+    segments = []
+    for (pos, color, layer) in codes:
+        bold = False
+        reverse = False
+
+        if layer == 2:
+            bold = True
+        if layer == 3:
+            reverse = True
+        if layer >= 4:
+            bold = True
+            reverse = True
 
         segments.append( s[cursor:pos] )
-        segments.append( get_code(fmt_color, bold=fmt_bold, reverse=fmt_reverse) )
+        segments.append( get_code(color, bold=bold, reverse=reverse) )
 
         cursor = pos
     segments.append( s[cursor:] )
@@ -230,15 +248,14 @@ if __name__ == '__main__':
     def test_highlight():
         import re
         rxs = [
-            'http://[a-zA-Z0-9.]+',
-            'http://[a-zA-Z0-9.-]+',
-            'http://[a-zA-Z0-9./?=]+',
-            'www',
+            '(b+).*\\1',
+            '(c+).*\\1',
+            '(d+).*\\1',
+            '(e+).*\\1',
         ]
         s = """\
-<a href="http://www.do-main.com">
-<a href="http://www.domain.com/path">
-<a href="http://www.domain.com/path?action=load">
+aaabbbcccdddeeefffeeedddcccbbbaaa
+fffeeedddcccbbbaaabbbcccdddeeefff
 """
         def display(rxs, s):
             spanlists = []
@@ -249,7 +266,9 @@ if __name__ == '__main__':
                 spanlists.append(spanlist)
             s = highlight_string(s, *spanlists)
             for (i,rx) in enumerate(rxs):
-                write_out('Regex %s: %s\n' % (i,rx))
+                color = get_highlighter(i)
+                color = colorize(color.__name__.ljust(10), color)
+                write_out('Regex %s: %s %s\n' % (i, color, rx))
             write_out(s)
 
         for i in range(0, len(rxs) + 1):
