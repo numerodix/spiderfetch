@@ -116,7 +116,7 @@ def highlight_string(s, *spanlists):
     Each spanlist gets a new color
     Spans can overlap up to 4 layers
     '''
-    # pair span with color -> (span, color)
+    # pair span with color and id of the list -> (span, color, list_id)
     tuples = []
     for spanlist in spanlists:
         get_id = lambda spanlist: spanlists.index(spanlist)
@@ -124,9 +124,9 @@ def highlight_string(s, *spanlists):
         tuples.extend( [(span, get_color(spanlist), get_id(spanlist))
                         for span in spanlist] )
 
-    # produce list of (pos,color,start_end) pairs
-    # (begin, Red, True)   # start new color
-    # (end, Red, False)    # end current color
+    # produce list of (pos,color,start_end,list_id) pairs
+    # (begin, Red, True, list_id)   # start new color
+    # (end, Red, False, list_id)    # end current color
     markers = []
     for i in tuples:
         (begin,end),color,list_id = i
