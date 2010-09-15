@@ -69,7 +69,7 @@ def get_queue(url, mode=None):
 
 def apply_mask(pattern, url):
     if pattern and url:
-        return re.match(pattern, url)
+        return re.search(pattern, url)
 
 def apply_hostfilter(filter_hostname, url):
     if os.environ.get("HOST_FILTER"):
