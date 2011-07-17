@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import gzip
 import cPickle as pickle    # cPickle is supposed to be faster
 import optparse
 import os
@@ -117,7 +116,6 @@ def serialize(o, filename, dir=None):
         getattr(o, "_to_pickle")()
     except AttributeError:
         pass
-    #fp = gzip.GzipFile(logdir(filename), 'w', compresslevel=1)
     try:
         filename_partial = filename + ".partial"
         pickle.dump(o, open(filename_partial, 'w'), pickle.HIGHEST_PROTOCOL)
@@ -128,7 +126,6 @@ def serialize(o, filename, dir=None):
 def deserialize(filename, dir=None):
     if dir:
         filename = os.path.join(dir, filename)
-    #fp = gzip.GzipFile(filename, 'r')
     o = pickle.load(open(filename, 'r'))
     try:
         getattr(o, "_from_pickle")()
