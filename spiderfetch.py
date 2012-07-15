@@ -170,6 +170,10 @@ def process_records(queue, rule, wb):
             except (NameError, OSError):
                 pass
 
+        pause = os.environ.get('PAUSE')
+        if pause:
+            time.sleep(int(pause))
+
     return newqueue
 
 def split_queue(queue, lastrule=False):
@@ -218,6 +222,7 @@ if __name__ == "__main__":
     a("--fetch", action="store_true", help="Fetch urls, don't dump")
     a("--dump", action="store_true", help="Dump urls, don't fetch")
     a("--host", action="store_true", help="Only spider this host")
+    a("--pause", type="int", metavar="<pause>", dest="pause", help="Pause for x seconds between requests")
     a("--depth", type="int", metavar="<depth>", dest="depth", help="Spider to this depth")
     (opts, args) = io.parse_args(parser)
     try:
@@ -227,6 +232,8 @@ if __name__ == "__main__":
             os.environ["DUMP_ALL"] = "1"
         if opts.host:
             os.environ["HOST_FILTER"] = "1"
+        if opts.pause:
+            os.environ["PAUSE"] = str(opts.pause)
         if opts.depth:
             os.environ["DEPTH"] = str(opts.depth)
 
