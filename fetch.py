@@ -28,7 +28,7 @@ http://fc02.deviantart.com/fs11/i/2006/171/b/1/atomic_by_numerodix.jpg
 # this should open some doors for us (IE7/Vista)
 _user_agent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"
 if os.environ.get('VANILLA_USER_AGENT'):
-    _user_agent_vanilla = "spiderfetch"
+    _user_agent = "spiderfetch"
 
 # don't wait forever
 timeout = 10
