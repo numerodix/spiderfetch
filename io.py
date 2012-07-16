@@ -56,6 +56,8 @@ LOGDIR           Directory to use for logfiles.
 
 TERM             When set and not 'dumb' gives color output.
 DEBUG_FETCH      Write newlines after every update to see the full output.
+
+VANILLA_USER_AGENT  Don't cloak the user agent.
 """
 
 #LOGDIR = os.environ.get("LOGDIR") or "logs"
