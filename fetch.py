@@ -136,12 +136,12 @@ class Myftpwrapper(urllib.ftpwrapper):
 
 class MyURLopener(urllib.FancyURLopener):
     checksum_size = CHECKSUM_SIZE
+    version = _user_agent
 
     def __init__(self, fetcher):
         urllib.FancyURLopener.__init__(self)
         self.fetcher = fetcher
 
-        self.version = _user_agent
         if os.environ.get("VANILLA_USER_AGENT"):
             self.version = _user_agent_vanilla
 
