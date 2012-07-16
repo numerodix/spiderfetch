@@ -224,6 +224,7 @@ if __name__ == "__main__":
     a("--host", action="store_true", help="Only spider this host")
     a("--pause", type="int", metavar="<pause>", dest="pause", help="Pause for x seconds between requests")
     a("--depth", type="int", metavar="<depth>", dest="depth", help="Spider to this depth")
+    a("--vanilla-user-agent", action="store_true", dest="vanilla_user_agent", help="Don't cloak the user agent")
     (opts, args) = io.parse_args(parser)
     try:
         if opts.fetch:
@@ -236,6 +237,8 @@ if __name__ == "__main__":
             os.environ["PAUSE"] = str(opts.pause)
         if opts.depth:
             os.environ["DEPTH"] = str(opts.depth)
+        if opts.vanilla_user_agent:
+            os.environ["VANILLA_USER_AGENT"] = "1"
 
         url = args[0]
         (q, w) = restore_session(url)

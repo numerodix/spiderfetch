@@ -27,6 +27,7 @@ http://fc02.deviantart.com/fs11/i/2006/171/b/1/atomic_by_numerodix.jpg
 
 # this should open some doors for us (IE7/Vista)
 _user_agent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)"
+_user_agent_vanilla = "spiderfetch"
 
 # don't wait forever
 timeout = 10
@@ -134,12 +135,15 @@ class Myftpwrapper(urllib.ftpwrapper):
                              self.endtransfer), conn[1])
 
 class MyURLopener(urllib.FancyURLopener):
-    version = _user_agent
     checksum_size = CHECKSUM_SIZE
 
     def __init__(self, fetcher):
         urllib.FancyURLopener.__init__(self)
         self.fetcher = fetcher
+
+        self.version = _user_agent
+        if os.environ.get("VANILLA_USER_AGENT"):
+            self.version = _user_agent_vanilla
 
     def prompt_user_passwd(self, host, realm):
         """Don't prompt for credentials"""
