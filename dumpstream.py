@@ -6,12 +6,12 @@ import subprocess
 import sys
 import traceback
 
-import io
+import ioutils
 
 
 
 def logerror(path):
-    io.savelog("Path failed: %s\n" % path, "error_dumpstream")
+    ioutils.savelog("Path failed: %s\n" % path, "error_dumpstream")
 
 def main():
     try:
@@ -26,16 +26,16 @@ def main():
 
             line = sys.stdin.readline()
     except KeyboardInterrupt:
-        io.write_abort()
+        ioutils.write_abort()
     except Exception, e:
         s  = "%s\n" % traceback.format_exc()
         s += "%s\n" % str(e)
         s += "Invocation string: %s\n" % str(args)
-        io.write_err(s)
+        ioutils.write_err(s)
 
 
 
 if __name__ == "__main__":
-    (parser, a) = io.init_opts("< <file>")
-    (opts, args) = io.parse_args(parser)
+    (parser, a) = ioutils.init_opts("< <file>")
+    (opts, args) = ioutils.parse_args(parser)
     main()

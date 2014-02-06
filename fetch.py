@@ -13,7 +13,7 @@ import urlparse
 from lib import ansicolor
 
 import filetype
-import io
+import ioutils
 import urlrewrite
 
 
@@ -402,9 +402,9 @@ class Fetcher(object):
         line = "%s  %s  %s  %s\n" % (status.ljust(10), actual, given, self.url)
         if not os.environ["LOGGING"] == str(False):
             if error:
-                io.savelog(line, "error_urls", "a")
+                ioutils.savelog(line, "error_urls", "a")
             else:
-                io.savelog(line, "log_urls", "a")
+                ioutils.savelog(line, "log_urls", "a")
 
     def format_size(self, size):
         if size == None:
@@ -467,7 +467,7 @@ class Fetcher(object):
         term = (os.environ.get("DEBUG_FETCH") and "\n") or "\r"
         if error or complete: 
             term = "\n"
-        io.write_err("%s%s%s%s" % (line, url, size, term))
+        ioutils.write_err("%s%s%s%s" % (line, url, size, term))
 
         # log download
         if error:
@@ -610,7 +610,7 @@ class Fetcher(object):
         except socket.timeout:
             self.handle_error(err.timeout)
         except KeyboardInterrupt:
-            io.write_abort()
+            ioutils.write_abort()
             raise
 
     def launch_w_tries(self):
@@ -632,14 +632,14 @@ class Fetcher(object):
 
 
 if __name__ == "__main__":
-    (parser, a) = io.init_opts("<url>+ [options]")
+    (parser, a) = ioutils.init_opts("<url>+ [options]")
     a("--fullpath", action="store_true",
       help="Use full path as filename to avoid name collisions")
     a("-c", "--continue", dest="cont", action="store_true", help="Resume downloads")
     a("-t", "--tries", dest="tries", type="int", action="store", help="Number of retries")
     a("-q", "--quiet", dest="quiet", action="store_true", help="Turn off logging")
     a("--spidertest", action="store_true", help="Test spider with url")
-    (opts, args) = io.parse_args(parser)
+    (opts, args) = ioutils.parse_args(parser)
     if getattr(opts, 'cont', None):
         os.environ["CONT"] = "1"
     if getattr(opts, 'tries', None):
@@ -651,7 +651,7 @@ if __name__ == "__main__":
         url = args[0]
         os.environ["SILENT_REDIRECT"] = "1"
         if opts.spidertest:
-            (fp, filename) = io.get_tempfile()
+            (fp, filename) = ioutils.get_tempfile()
             Fetcher(mode=Fetcher.SPIDER, url=url,
                     filename=filename).launch_w_tries()
             os.close(fp) ; os.unlink(filename)
@@ -667,7 +667,7 @@ if __name__ == "__main__":
                 url = args.pop()
                 filename = urlrewrite.url_to_filename(url)
                 if not os.environ.get("CONT"):
-                    filename = io.safe_filename(filename)
+                    filename = ioutils.safe_filename(filename)
                 try:
                     Fetcher(mode=Fetcher.FETCH, url=url,
                             filename=filename).launch_w_tries()
@@ -678,4 +678,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         sys.exit()
     except IndexError:
-        io.opts_help(None, None, None, parser)
+        ioutils.opts_help(None, None, None, parser)

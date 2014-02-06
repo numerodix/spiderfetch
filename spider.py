@@ -6,7 +6,7 @@ import urllib
 
 from lib import ansicolor
 
-import io
+import ioutils
 import urlrewrite
 
 
@@ -119,10 +119,10 @@ def colorize_shell(str, url=None):
 
 
 if __name__ == "__main__":
-    (parser, a) = io.init_opts("[ <url|file> [options] | --test ]")
+    (parser, a) = ioutils.init_opts("[ <url|file> [options] | --test ]")
     a("--dump", action="store_true", help="Dump urls")
     a("--test", action="store_true", help="Run spider testsuite")
-    (opts, args) = io.parse_args(parser)
+    (opts, args) = ioutils.parse_args(parser)
     try:
         url = None
         if opts.test:
@@ -137,4 +137,4 @@ if __name__ == "__main__":
         else:
             print colorize_shell(data, url)
     except IndexError:
-        io.opts_help(None, None, None, parser)
+        ioutils.opts_help(None, None, None, parser)

@@ -5,7 +5,7 @@ import sys
 
 from lib import ansicolor
 
-import io
+import ioutils
 
 
 class Node(object):
@@ -58,11 +58,11 @@ class Web(object):
 
     def dump(self):
         for u in self.index:
-            io.write_out("%s\n" % u)
+            ioutils.write_out("%s\n" % u)
 
     def assert_in_web(self, url):
         if url not in self.index:
-            io.write_err("Url %s not in the web\n" % ansicolor.yellow(url))
+            ioutils.write_err("Url %s not in the web\n" % ansicolor.yellow(url))
             sys.exit(1)
         
     def print_refs(self, url, out=True):
@@ -71,12 +71,12 @@ class Web(object):
         l = node.outgoing
         if not out: l = node.incoming
         for u in l:
-            io.write_out("%s\n" % u)
+            ioutils.write_out("%s\n" % u)
 
     def print_aliases(self, url):
         self.assert_in_web(url)
         for u in self.index.get(url).aliases:
-            io.write_out("%s\n" % u)
+            ioutils.write_out("%s\n" % u)
 
     def get_trace(self, url):
         self.assert_in_web(url)
@@ -112,17 +112,17 @@ class Web(object):
 
     def print_trace(self, path):
         if path:
-            io.write_err("Showing trace from root:\n")
+            ioutils.write_err("Showing trace from root:\n")
             for (i, hop) in enumerate(path):
-                io.write_err(" %s  %s\n" % (str(i).rjust(1+(len(path)/10)), hop))
+                ioutils.write_err(" %s  %s\n" % (str(i).rjust(1+(len(path)/10)), hop))
 
     def print_popular(self):
         tuples = [(len(n.incoming), n) for n in self.index.values()]
         tuples.sort(reverse=True)
         ln = len(str(tuples[0][0]).rjust(2))
-        io.write_err("Showing most referenced urls:\n")
+        ioutils.write_err("Showing most referenced urls:\n")
         for (i, node) in tuples[:10]:
-            io.write_err(" %s  %s\n" % (str(i).rjust(ln), node.url))
+            ioutils.write_err(" %s  %s\n" % (str(i).rjust(ln), node.url))
 
     def print_multiple(self):
         ss = []
@@ -134,21 +134,21 @@ class Web(object):
         if ss:
             ss.sort(reverse=True)
             ln = len(str(ss[0][0]))  # length of highest count
-            io.write_err("Showing documents with multiple urls:\n")
+            ioutils.write_err("Showing documents with multiple urls:\n")
             for pair in ss:
                 (count, aliases) = pair
                 for url in aliases:
                     prefix = "".rjust(ln)
                     if aliases.index(url) == 0:
                         prefix = str(count).rjust(ln)
-                    io.write_err(" %s  %s\n" % (prefix, url))
+                    ioutils.write_err(" %s  %s\n" % (prefix, url))
                 if not ss.index(pair) == len(ss)-1:
-                    io.write_err("\n")
+                    ioutils.write_err("\n")
 
     def print_stats(self):
         s  = "Root url : %s\n" % self.root.url
         s += "Web size : %s urls\n" % len(self.index)
-        io.write_err(s)
+        ioutils.write_err(s)
 
     ### Pickling
 
@@ -172,7 +172,7 @@ class Web(object):
 
 
 if __name__ == "__main__":
-    (parser, a) = io.init_opts("<web> [options]")
+    (parser, a) = ioutils.init_opts("<web> [options]")
     a("--dump", action="store_true", help="Dump all urls in web")
     a("--in", metavar="<url>", dest="into", help="Find incoming urls to <url>")
     a("--out", metavar="<url>", help="Find outgoing urls from <url>")
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     a("--deepest", action="store_true", help="Trace url furthest from root")
     a("--popular", action="store_true", help="Find the most referenced urls")
     a("--test", action="store_true", help="Run trace loop test")
-    (opts, args) = io.parse_args(parser)
+    (opts, args) = ioutils.parse_args(parser)
     try:
         if opts.test:
             wb = Web()
@@ -193,8 +193,8 @@ if __name__ == "__main__":
             #wb.index["b"].incoming["a"] = wb.root      # cut link from a to b
             wb.index["b"].incoming["c"] = wb.index["c"] # create loop b <-> c
             wb.index["c"].incoming["b"] = wb.index["b"]
-            io.serialize(wb, "web")
-            wb = io.deserialize("web")
+            ioutils.serialize(wb, "web")
+            wb = ioutils.deserialize("web")
             print "Root :", wb.root.url
             print "Index:", wb.index
             print "b.in :", wb.index['b'].incoming
@@ -202,7 +202,7 @@ if __name__ == "__main__":
             wb.print_trace(wb.get_trace("c"))   # inf loop if loop not detected
             sys.exit()
 
-        wb = io.deserialize(args[0])
+        wb = ioutils.deserialize(args[0])
         if opts.dump:
             wb.dump()
         elif opts.into or opts.out:
@@ -220,4 +220,4 @@ if __name__ == "__main__":
         else:
             wb.print_stats()
     except IndexError:
-        io.opts_help(None, None, None, parser)
+        ioutils.opts_help(None, None, None, parser)

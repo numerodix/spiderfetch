@@ -12,7 +12,7 @@ from lib import ansicolor
 
 import fetch
 import filetype
-import io
+import ioutils
 import recipe
 import shutil
 import spider
@@ -27,15 +27,15 @@ LAST_SAVE = time.time()
 def save_session(wb, queue=None):
     hostname = urlrewrite.get_hostname(wb.root.url)
     filename = urlrewrite.hostname_to_filename(hostname)
-    io.write_err("Saving session to %s ..." %
+    ioutils.write_err("Saving session to %s ..." %
          ansicolor.yellow(filename+".{web,session}"))
-    io.serialize(wb, filename + ".web", dir=io.LOGDIR)
+    ioutils.serialize(wb, filename + ".web", dir=ioutils.LOGDIR)
     if queue: 
-        io.serialize(queue, filename + ".session", dir=io.LOGDIR)
+        ioutils.serialize(queue, filename + ".session", dir=ioutils.LOGDIR)
     # only web being saved, ie. spidering complete, remove old session
-    elif io.file_exists(filename + ".session", dir=io.LOGDIR):
-        io.delete(filename + ".session", dir=io.LOGDIR)
-    io.write_err(ansicolor.green("done\n"))
+    elif ioutils.file_exists(filename + ".session", dir=ioutils.LOGDIR):
+        ioutils.delete(filename + ".session", dir=ioutils.LOGDIR)
+    ioutils.write_err(ansicolor.green("done\n"))
 
 def maybesave(wb, queue):
     global SAVE_INTERVAL
@@ -49,29 +49,29 @@ def restore_session(url):
     hostname = urlrewrite.get_hostname(url)
     filename = urlrewrite.hostname_to_filename(hostname)
     q, wb = None, None
-    if (io.file_exists(filename + ".web", dir=io.LOGDIR)):
-        io.write_err("Restoring web from %s ..." %
+    if (ioutils.file_exists(filename + ".web", dir=ioutils.LOGDIR)):
+        ioutils.write_err("Restoring web from %s ..." %
              ansicolor.yellow(filename+".web"))
-        wb = io.deserialize(filename + ".web", dir=io.LOGDIR)
-        io.write_err(ansicolor.green("done\n"))
-    if (io.file_exists(filename + ".session", dir=io.LOGDIR)):
-        io.write_err("Restoring session from %s ..." %
+        wb = ioutils.deserialize(filename + ".web", dir=ioutils.LOGDIR)
+        ioutils.write_err(ansicolor.green("done\n"))
+    if (ioutils.file_exists(filename + ".session", dir=ioutils.LOGDIR)):
+        ioutils.write_err("Restoring session from %s ..." %
              ansicolor.yellow(filename+".session"))
-        q = io.deserialize(filename + ".session", dir=io.LOGDIR)
+        q = ioutils.deserialize(filename + ".session", dir=ioutils.LOGDIR)
         q = recipe.overrule_records(q)
-        io.write_err(ansicolor.green("done\n"))
+        ioutils.write_err(ansicolor.green("done\n"))
     return q, wb
 
 def log_exc(exc, url, wb):
-    exc_filename = io.safe_filename("exc", dir=io.LOGDIR)
-    io.serialize(exc, exc_filename, dir=io.LOGDIR)
+    exc_filename = ioutils.safe_filename("exc", dir=ioutils.LOGDIR)
+    ioutils.serialize(exc, exc_filename, dir=ioutils.LOGDIR)
     s = traceback.format_exc()
     s += "\nBad url:   |%s|\n" % url
     node = wb.get(url)
     for u in node.incoming.keys():
         s += "Ref    :   |%s|\n" % u
     s += "Exception object serialized to file: %s\n\n" % exc_filename
-    io.savelog(s, "error_log", "a")
+    ioutils.savelog(s, "error_log", "a")
 
 def get_url(fetcher, wb, host_filter=False):
     """http 30x redirects produce a recursion with new urls that may or may not
@@ -107,7 +107,7 @@ def qualify_urls(ref_url, urls, rule, newqueue, wb):
         record = {"url" : url}
         if url not in wb:
             if _dump:
-                io.write_out("%s\n" % url)
+                ioutils.write_out("%s\n" % url)
             if _fetch and _spider:
                 record["mode"] = fetch.Fetcher.SPIDER_FETCH
             elif _fetch:
@@ -131,7 +131,7 @@ def process_records(queue, rule, wb):
 
         url = record.get("url")
         try:
-            (fp, filename) = io.get_tempfile()
+            (fp, filename) = ioutils.get_tempfile()
             f = fetch.Fetcher(mode=record.get("mode"), url=url, filename=filename)
             url = get_url(f, wb, host_filter=rule.get("host_filter"))
             filename = f.filename
@@ -151,7 +151,7 @@ def process_records(queue, rule, wb):
 
             if record.get("mode") == fetch.Fetcher.FETCH:
                 shutil.move(filename,
-                  io.safe_filename(urlrewrite.url_to_filename(url)))
+                  ioutils.safe_filename(urlrewrite.url_to_filename(url)))
 
         except (fetch.DuplicateUrlWarning, fetch.UrlRedirectsOffHost):
             pass
@@ -217,14 +217,14 @@ def main(queue, rules, wb):
 
 
 if __name__ == "__main__":
-    (parser, a) = io.init_opts("<url> ['<pattern>'] [options]")
+    (parser, a) = ioutils.init_opts("<url> ['<pattern>'] [options]")
     a("--recipe", metavar="<recipe>", dest="recipe", help="Use a spidering recipe")
     a("--fetch", action="store_true", help="Fetch urls, don't dump")
     a("--dump", action="store_true", help="Dump urls, don't fetch")
     a("--host", action="store_true", help="Only spider this host")
     a("--pause", type="int", metavar="<pause>", dest="pause", help="Pause for x seconds between requests")
     a("--depth", type="int", metavar="<depth>", dest="depth", help="Spider to this depth")
-    (opts, args) = io.parse_args(parser)
+    (opts, args) = ioutils.parse_args(parser)
     try:
         if opts.fetch:
             os.environ["FETCH_ALL"] = "1"
@@ -247,8 +247,8 @@ if __name__ == "__main__":
         queue = q or recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
         wb = w or web.Web(url)
     except recipe.PatternError, e:
-        io.write_err(ansicolor.red("%s\n" % e))
+        ioutils.write_err(ansicolor.red("%s\n" % e))
         sys.exit(1)
     except IndexError:
-        io.opts_help(None, None, None, parser)
+        ioutils.opts_help(None, None, None, parser)
     main(queue, rules, wb)
