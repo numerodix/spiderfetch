@@ -144,7 +144,7 @@ class MyURLopener(FancyURLopener):
     version = _user_agent
 
     def __init__(self, fetcher):
-        urllib.FancyURLopener.__init__(self)
+        FancyURLopener.__init__(self)
         self.fetcher = fetcher
 
     def prompt_user_passwd(self, host, realm):
