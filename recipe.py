@@ -8,7 +8,9 @@ import urlrewrite
 
 RECIPEDIR = os.environ.get("RECIPEDIR") or "recipes"
 
-class PatternError(Exception): pass
+class PatternError(Exception):
+    pass
+
 
 def switch_key(d, k1, k2):
     if d.get(k1):
@@ -35,8 +37,8 @@ def rewrite_recipe(recipe, url):
             if r in rule and type(rule[r]) == str:
                 try:
                     rule[r] = re.compile(rule[r])
-                except re.error, e:
-                    raise PatternError, "Pattern error: %s: %s" % (e.args[0], rule[r])
+                except re.error as e:
+                    raise PatternError("Pattern error: %s: %s" % (e.args[0], rule[r]))
     return recipe
 
 def overrule_records(records):
