@@ -80,7 +80,7 @@ def get_url(fetcher, wb, host_filter=False):
         try:
             fetcher.launch_w_tries()
             break
-        except fetch.ChangedUrlWarning, e:
+        except fetch.ChangedUrlWarning as e:
             url = urlrewrite.rewrite_urls(fetcher.url, [e.new_url]).next()
             if url in wb:
                 raise fetch.DuplicateUrlWarning
@@ -160,7 +160,7 @@ def process_records(queue, rule, wb):
             q.extend(newqueue)
             save_session(wb, queue=q)
             sys.exit(1)
-        except Exception, exc:
+        except Exception as exc:
             log_exc(exc, url, wb)
         finally:
             try:
@@ -246,7 +246,7 @@ if __name__ == "__main__":
             rules = recipe.get_recipe(pattern, url)
         queue = q or recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
         wb = w or web.Web(url)
-    except recipe.PatternError, e:
+    except recipe.PatternError as e:
         ioutils.write_err(ansicolor.red("%s\n" % e))
         sys.exit(1)
     except IndexError:
