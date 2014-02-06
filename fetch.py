@@ -122,9 +122,9 @@ class Myftpwrapper(urllib.ftpwrapper):
             try:
                 cmd = 'RETR ' + file
                 conn = self.ftp.ntransfercmd(cmd, rest=rest)
-            except ftplib.error_perm, reason:
+            except ftplib.error_perm as reason:
                 if str(reason)[:3] != '550':
-                    raise IOError, ('ftp error', reason), sys.exc_info()[2]
+                    raise IOError(('ftp error', reason), sys.exc_info()[2])
         if not conn:
             # Set transfer mode to ASCII!
             self.ftp.voidcmd('TYPE A')
@@ -208,7 +208,7 @@ class MyURLopener(urllib.FancyURLopener):
                 hdrs = fp.info()
                 del fp
                 return urllib.url2pathname(urllib.splithost(url1)[1]), hdrs
-            except IOError, msg:
+            except IOError as msg:
                 pass
         bs = 1024*8
         size = -1
@@ -267,14 +267,15 @@ class MyURLopener(urllib.FancyURLopener):
     def open_ftp(self, url):
         """Use FTP protocol."""
         if not isinstance(url, str):
-            raise IOError, ('ftp error', 'proxy support for ftp protocol currently not implemented')
+            raise IOError(('ftp error', 'proxy support for ftp protocol currently not implemented'))
         import mimetypes, mimetools
         try:
             from cStringIO import StringIO
         except ImportError:
             from StringIO import StringIO
         host, path = urllib.splithost(url)
-        if not host: raise IOError, ('ftp error', 'no host given')
+        if not host:
+            raise IOError(('ftp error', 'no host given'))
         host, port = urllib.splitport(host)
         user, host = urllib.splituser(host)
         if user: user, passwd = urllib.splitpasswd(user)
@@ -324,8 +325,8 @@ class MyURLopener(urllib.FancyURLopener):
                 headers += "Content-Length: %d\n" % retrlen
             headers = mimetools.Message(StringIO(headers))
             return urllib.addinfourl(fp, headers, "ftp:" + url)
-        except urllib.ftperrors(), msg:
-            raise IOError, ('ftp error', msg), sys.exc_info()[2]
+        except urllib.ftperrors() as msg:
+            raise IOError(('ftp error', msg), sys.exc_info()[2])
 
 class Fetcher(object):
     FETCH = 1
@@ -574,7 +575,7 @@ class Fetcher(object):
             self.error = None
 
             self.load_url()
-        except ChangedUrlWarning, e:
+        except ChangedUrlWarning as e:
             self.handle_error(err.redirect)
             raise
         except filetype.WrongFileTypeError:
@@ -589,7 +590,7 @@ class Fetcher(object):
             self.handle_error(err.no_resume)
         except ErrorAlreadyProcessed:
             pass
-        except IOError, exc:
+        except IOError as exc:
             if exc and exc.args: 
                 if len(exc.args) == 2:
                     (_, errobj) = exc.args
@@ -673,7 +674,7 @@ if __name__ == "__main__":
                 try:
                     Fetcher(mode=Fetcher.FETCH, url=url,
                             filename=filename).launch_w_tries()
-                except Exception, e:
+                except Exception as e:
                     print(e)
     except filetype.WrongFileTypeError:
         os.unlink(filename)
