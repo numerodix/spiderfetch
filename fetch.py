@@ -11,6 +11,7 @@ import sys
 import time
 import urllib
 from compat import ftpwrapper
+from compat import unwrap
 from compat import urlparse
 from compat import FancyURLopener
 
@@ -200,7 +201,7 @@ class MyURLopener(FancyURLopener):
     def retrieve(self, url, filename, reporthook=None, data=None, cont=None):
         """retrieve(url) returns (filename, headers) for a local object
         or (tempfilename, headers) for a remote object."""
-        url = urllib.unwrap(urllib.toBytes(url))
+        url = unwrap(urllib.toBytes(url))
         if self.tempcache and url in self.tempcache:
             return self.tempcache[url]
         type, url1 = urllib.splittype(url)

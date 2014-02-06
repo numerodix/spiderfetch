@@ -22,3 +22,8 @@ try:
     from urllib import FancyURLopener
 except ImportError:
     from urllib.request import FancyURLopener
+
+try:
+    from urllib import unwrap
+except ImportError:
+    from urllib.request import unwrap
