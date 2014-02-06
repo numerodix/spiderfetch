@@ -15,7 +15,9 @@ HEADER_SIZE_URLS = 100*1024
 html_regex = "(?ims).*<\s*(!DOCTYPE html|html|head|title|body)"
 _html_re = re.compile(html_regex)
 
-class WrongFileTypeError(Exception): pass
+class WrongFileTypeError(Exception):
+    pass
+
 
 def is_html(data):
     if data and re.match(_html_re, data):
@@ -24,7 +26,7 @@ def is_html(data):
 def has_urls(data, url=None):
     if data: 
         try:
-            spider.findall(data, url).next()
+            next(spider.findall(data, url))
             return True
         except StopIteration:
             pass
