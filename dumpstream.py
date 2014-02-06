@@ -27,7 +27,7 @@ def main():
             line = sys.stdin.readline()
     except KeyboardInterrupt:
         ioutils.write_abort()
-    except Exception, e:
+    except Exception as e:
         s  = "%s\n" % traceback.format_exc()
         s += "%s\n" % str(e)
         s += "Invocation string: %s\n" % str(args)
