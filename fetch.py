@@ -3,14 +3,14 @@
 from __future__ import print_function
 
 import ftplib
-import httplib
+from compat import httplib
 import os
 import re
 import socket
 import sys
 import time
 import urllib
-import urlparse
+from compat import urlparse
 
 from lib import ansicolor
 
