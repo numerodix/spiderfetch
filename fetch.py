@@ -249,7 +249,7 @@ class MyURLopener(FancyURLopener):
             reporthook(blocknum, bs, size)
         while 1:
             block = fp.read(bs)
-            if block == "":
+            if not block:
                 break
             read += len(block)
             tfp.write(block)
@@ -263,7 +263,7 @@ class MyURLopener(FancyURLopener):
 
         # raise exception if actual size does not match content-length header
         if size >= 0 and read < size:
-            raise urllib.ContentTooShortError("retrieval incomplete: got only %i out "
+            raise ContentTooShortError("retrieval incomplete: got only %i out "
                                        "of %i bytes" % (read, size), result)
 
         return result
