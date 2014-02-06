@@ -130,7 +130,7 @@ def serialize(o, filename, dir=None):
 def deserialize(filename, dir=None):
     if dir:
         filename = os.path.join(dir, filename)
-    o = pickle.load(open(filename, 'r'))
+    o = pickle.load(open(filename, 'rb'))
     try:
         getattr(o, "_from_pickle")()
     except AttributeError:
