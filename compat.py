@@ -17,3 +17,8 @@ try:
     from urllib import ftpwrapper
 except ImportError:
     from urllib.request import ftpwrapper
+
+try:
+    from urllib import FancyURLopener
+except ImportError:
+    from urllib.request import FancyURLopener

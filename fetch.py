@@ -12,6 +12,7 @@ import time
 import urllib
 from compat import ftpwrapper
 from compat import urlparse
+from compat import FancyURLopener
 
 from lib import ansicolor
 
@@ -138,7 +139,7 @@ class Myftpwrapper(ftpwrapper):
         return (urllib.addclosehook(conn[0].makefile('rb'),
                              self.endtransfer), conn[1])
 
-class MyURLopener(urllib.FancyURLopener):
+class MyURLopener(FancyURLopener):
     checksum_size = CHECKSUM_SIZE
     version = _user_agent
 
