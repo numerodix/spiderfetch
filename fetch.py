@@ -10,6 +10,7 @@ import socket
 import sys
 import time
 import urllib
+from compat import ftpwrapper
 from compat import urlparse
 
 from lib import ansicolor
@@ -105,7 +106,7 @@ class err(object):
 err = err()     # XXX ugly, but it's messy enough to do this on an instance
 
 # Override ftpwrapper from urllib to change ntransfercmd call, now using 'rest'
-class Myftpwrapper(urllib.ftpwrapper):
+class Myftpwrapper(ftpwrapper):
     def retrfile(self, file, type, rest=None):
         import ftplib
         self.endtransfer()

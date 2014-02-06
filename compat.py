@@ -12,3 +12,8 @@ try:
     import urlparse
 except ImportError:
     from urllib import parse as urlparse
+
+try:
+    from urllib import ftpwrapper
+except ImportError:
+    from urllib.request import ftpwrapper
