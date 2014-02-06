@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-import cPickle as pickle    # cPickle is supposed to be faster
+from compat import pickle
 import optparse
 import os
 import tempfile
