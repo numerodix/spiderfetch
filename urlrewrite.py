@@ -48,7 +48,7 @@ def truncate_url(width, s):
     if len(s) > width:
         filler = "..."
         w = width - len(filler)
-        half = w / 2
+        half = w // 2
         rest = w % 2
         s = s[:half+rest] + filler + s[-half:]
     return s
