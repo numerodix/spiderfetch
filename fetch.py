@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import ftplib
 import httplib
 import os
@@ -672,7 +674,7 @@ if __name__ == "__main__":
                     Fetcher(mode=Fetcher.FETCH, url=url,
                             filename=filename).launch_w_tries()
                 except Exception, e:
-                    print e
+                    print(e)
     except filetype.WrongFileTypeError:
         os.unlink(filename)
     except KeyboardInterrupt:

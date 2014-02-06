@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import cPickle as pickle    # cPickle is supposed to be faster
 import optparse
 import os
@@ -174,7 +176,7 @@ if __name__ == "__main__":
         s = "dvorak"
         (fp, filename) = get_tempfile()
         serialize(s, filename)
-        print "Serialization sanity check:", s == deserialize(filename)
+        print("Serialization sanity check:", s == deserialize(filename))
     finally:
         os.close(fp)
         os.unlink(filename)

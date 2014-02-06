@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import re
 
 import spider
@@ -33,7 +35,7 @@ if __name__ == "__main__":
     import sys
     try:
         data = open(sys.argv[1], 'r').read()
-        print "is_html:  %s" % is_html(data)
-        print "has_urls: %s" % has_urls(data)
+        print("is_html:  %s" % is_html(data))
+        print("has_urls: %s" % has_urls(data))
     except IndexError:
-        print "Usage:  %s <url>" % sys.argv[0]
+        print("Usage:  %s <url>" % sys.argv[0])

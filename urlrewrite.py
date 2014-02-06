@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import os
 import re
 import urlparse
@@ -107,4 +109,4 @@ if __name__ == "__main__":
     urls = ["../index.php?name=jack&act=whatever",
             "http://www.juventuz.com/matches"]
     for u in rewrite_urls(base, urls):
-        print u
+        print(u)

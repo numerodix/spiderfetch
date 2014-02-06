@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import itertools
 import re
 import urllib
@@ -133,8 +135,8 @@ if __name__ == "__main__":
 
         if opts.dump:
             for u in unique(unbox_it_to_ss(findall(data, url))):
-                print u
+                print(u)
         else:
-            print colorize_shell(data, url)
+            print(colorize_shell(data, url))
     except IndexError:
         ioutils.opts_help(None, None, None, parser)

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import pickle
 import sys
 
@@ -159,8 +161,8 @@ class Web(object):
             for n in node.outgoing:
                 node.outgoing[n] = None
         #for node in self.index.values():
-        #    print node.incoming
-        #    print node.outgoing
+        #    print(node.incoming)
+        #    print(node.outgoing)
 
     def _from_pickle(self):
         for node in self.index.values():
@@ -195,10 +197,10 @@ if __name__ == "__main__":
             wb.index["c"].incoming["b"] = wb.index["b"]
             ioutils.serialize(wb, "web")
             wb = ioutils.deserialize("web")
-            print "Root :", wb.root.url
-            print "Index:", wb.index
-            print "b.in :", wb.index['b'].incoming
-            print "c.in :", wb.index['c'].incoming
+            print("Root :", wb.root.url)
+            print("Index:", wb.index)
+            print("b.in :", wb.index['b'].incoming)
+            print("c.in :", wb.index['c'].incoming)
             wb.print_trace(wb.get_trace("c"))   # inf loop if loop not detected
             sys.exit()
 
