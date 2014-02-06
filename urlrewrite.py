@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import os
 import re
+from functools import reduce
 from compat import urlparse
 
 
