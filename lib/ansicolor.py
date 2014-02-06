@@ -132,7 +132,7 @@ def highlight_string(s, *spanlists):
         (begin,end),color,list_id = i
         markers.append( (begin, color, True, list_id) )
         markers.append( (end, color, False, list_id) )
-    markers.sort(key=lambda (pos,color,start_end,list_id): pos)
+    markers.sort(key=lambda pos,color,start_end,list_id: pos)
 
     # produce list of (pos, color, layer) pairs
     codes = []
