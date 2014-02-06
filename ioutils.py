@@ -122,7 +122,7 @@ def serialize(o, filename, dir=None):
         pass
     try:
         filename_partial = filename + ".partial"
-        pickle.dump(o, open(filename_partial, 'w'), pickle.HIGHEST_PROTOCOL)
+        pickle.dump(o, open(filename_partial, 'wb'), pickle.HIGHEST_PROTOCOL)
         os.rename(filename_partial, filename)
     finally:
         os.path.exists(filename_partial) and os.unlink(filename_partial)
