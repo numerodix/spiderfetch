@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import os
 import re
-import urlparse
+from compat import urlparse
 
 
 SCHEMES = ["ftp", "http", "https"]
