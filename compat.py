@@ -13,15 +13,21 @@ try:
 except ImportError:
     from urllib import parse as urlparse
 
+
+try:
+    from urllib import FancyURLopener
+except ImportError:
+    from urllib.request import FancyURLopener
+
 try:
     from urllib import ftpwrapper
 except ImportError:
     from urllib.request import ftpwrapper
 
 try:
-    from urllib import FancyURLopener
+    from urllib import splittype
 except ImportError:
-    from urllib.request import FancyURLopener
+    from urllib.request import splittype
 
 try:
     from urllib import unwrap
