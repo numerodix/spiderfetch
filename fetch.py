@@ -14,6 +14,7 @@ from compat import ftpwrapper
 from compat import splittype
 from compat import unwrap
 from compat import urlparse
+from compat import ContentTooShortError
 from compat import FancyURLopener
 
 from lib import ansicolor
@@ -586,7 +587,7 @@ class Fetcher(object):
             self.handle_error(err.wrong_type)
         except ZeroDataError:
             self.handle_error(err.no_data)
-        except urllib.ContentTooShortError:
+        except ContentTooShortError:
             self.handle_error(err.incomplete)
         except ResumeChecksumFailed:
             self.handle_error(err.checksum)

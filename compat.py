@@ -20,6 +20,11 @@ except ImportError:
     from urllib.request import FancyURLopener
 
 try:
+    from urllib import ContentTooShortError
+except ImportError:
+    from urllib.request import ContentTooShortError
+
+try:
     from urllib import ftpwrapper
 except ImportError:
     from urllib.request import ftpwrapper
