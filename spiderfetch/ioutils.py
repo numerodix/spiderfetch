@@ -2,13 +2,13 @@
 
 from __future__ import print_function
 
-from compat import pickle
 import optparse
 import os
 import tempfile
 import sys
 
-from lib import ansicolor
+from spiderfetch.compat import pickle
+from spiderfetch.lib import ansicolor
 
 
 _help_header = "spiderfetch tool suite\n\n"

@@ -5,10 +5,9 @@ from __future__ import print_function
 import re
 import urllib
 
-from lib import ansicolor
-
-import ioutils
-import urlrewrite
+from spiderfetch import ioutils
+from spiderfetch import urlrewrite
+from spiderfetch.lib import ansicolor
 
 
 testcases = """\

@@ -9,18 +9,17 @@ import socket
 import sys
 import time
 import urllib
-from compat import ftpwrapper
-from compat import splittype
-from compat import unwrap
-from compat import urlparse
-from compat import ContentTooShortError
-from compat import FancyURLopener
 
-from lib import ansicolor
-
-import filetype
-import ioutils
-import urlrewrite
+from spiderfetch import filetype
+from spiderfetch import ioutils
+from spiderfetch import urlrewrite
+from spiderfetch.compat import ContentTooShortError
+from spiderfetch.compat import FancyURLopener
+from spiderfetch.compat import ftpwrapper
+from spiderfetch.compat import splittype
+from spiderfetch.compat import unwrap
+from spiderfetch.compat import urlparse
+from spiderfetch.lib import ansicolor
 
 
 """ testurls

@@ -3,8 +3,9 @@
 from __future__ import print_function
 
 import re
+import sys
 
-import spider
+from spiderfetch import spider
 
 
 # how many bytes of the file to download before doing a type check
@@ -34,7 +35,6 @@ def has_urls(data, url=None):
 
 
 if __name__ == "__main__":
-    import sys
     try:
         data = open(sys.argv[1], 'r').read()
         print("is_html:  %s" % is_html(data))

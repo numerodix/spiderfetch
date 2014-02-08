@@ -4,9 +4,8 @@ from __future__ import print_function
 
 import sys
 
-from lib import ansicolor
-
-import ioutils
+from spiderfetch import ioutils
+from spiderfetch.lib import ansicolor
 
 
 class Node(object):

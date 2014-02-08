@@ -3,7 +3,7 @@
 import re
 import os
 
-import urlrewrite
+from spiderfetch import urlrewrite
 
 
 RECIPEDIR = os.environ.get("RECIPEDIR") or "recipes"

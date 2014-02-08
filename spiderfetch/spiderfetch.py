@@ -3,19 +3,18 @@
 # <desc> Web spider and fetcher </desc>
 
 import os
+import shutil
 import sys
 import traceback
-
-from lib import ansicolor
-
-import fetch
-import ioutils
-import recipe
-import shutil
-import spider
 import time
-import urlrewrite
-import web
+
+from spiderfetch import fetch
+from spiderfetch import ioutils
+from spiderfetch import recipe
+from spiderfetch import spider
+from spiderfetch import urlrewrite
+from spiderfetch import web
+from spiderfetch.lib import ansicolor
 
 
 SAVE_INTERVAL = 60 * 30

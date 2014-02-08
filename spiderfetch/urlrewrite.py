@@ -2,10 +2,11 @@
 
 from __future__ import print_function
 
+from functools import reduce
 import os
 import re
-from functools import reduce
-from compat import urlparse
+
+from spiderfetch.compat import urlparse
 
 
 SCHEMES = ["ftp", "http", "https"]
