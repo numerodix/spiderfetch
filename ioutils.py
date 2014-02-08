@@ -13,7 +13,7 @@ from lib import ansicolor
 
 _help_header = "spiderfetch tool suite\n\n"
 
-_help_tools="""\
+_help_tools = """\
 == spiderfetch ==
 
 Spiders recursively for urls, starting from <url>. Driven either by <pattern>
@@ -47,7 +47,7 @@ An automation module for use with mplayer to record media streams. Reads urls
 from a file and records with mplayer.
 """
 
-_help_vars="""\
+_help_vars = """\
 SOCKET_TIMEOUT   Seconds to wait before calling a socket timeout.
 TRIES            Number of tries on timeout errors.
 
@@ -76,7 +76,7 @@ def write_abort():
     write_err("\n%s\n" % ansicolor.red("User aborted"))
 
 def get_tempfile():
-    return tempfile.mkstemp(prefix="."+os.path.basename(sys.argv[0])+".")
+    return tempfile.mkstemp(prefix="." + os.path.basename(sys.argv[0]) + ".")
 
 def safe_filename(filename, dir=None):
     if dir:
@@ -143,22 +143,22 @@ def init_opts(usage):
     return parser, parser.add_option
 
 def opts_help(option, opt_str, value, parser):
-    write_err(_help_header+
-        "Usage:  %s %s\n\n" % (os.path.basename(sys.argv[0]), parser.usage))
+    write_err(_help_header +
+              "Usage:  %s %s\n\n" % (os.path.basename(sys.argv[0]), parser.usage))
     for o in parser.option_list:
         var = o.metavar or ""
         short = (o._short_opts and o._short_opts[0]) or ""
-        long  = (o._long_opts  and o._long_opts[0])  or ""
+        long = (o._long_opts and o._long_opts[0]) or ""
         argument = "%s %s %s" % (short, long, var)
         write_err("  %s %s\n" % (argument.strip().ljust(25), o.help))
     sys.exit(2)
 
 def help_tools(option, opt_str, value, parser):
-    write_err(_help_header+_help_tools)
+    write_err(_help_header + _help_tools)
     sys.exit(2)
 
 def help_vars(option, opt_str, value, parser):
-    write_err(_help_header+_help_vars)
+    write_err(_help_header + _help_vars)
     sys.exit(2)
 
 def parse_args(parser):

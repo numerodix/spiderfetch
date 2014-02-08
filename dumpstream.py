@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import optparse
 import os
 import subprocess
 import sys
@@ -28,7 +27,7 @@ def main():
     except KeyboardInterrupt:
         ioutils.write_abort()
     except Exception as e:
-        s  = "%s\n" % traceback.format_exc()
+        s = "%s\n" % traceback.format_exc()
         s += "%s\n" % str(e)
         s += "Invocation string: %s\n" % str(args)
         ioutils.write_err(s)

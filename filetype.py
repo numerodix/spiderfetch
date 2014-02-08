@@ -9,7 +9,7 @@ import spider
 
 # how many bytes of the file to download before doing a type check
 HEADER_SIZE_HTML = 1024
-HEADER_SIZE_URLS = 100*1024
+HEADER_SIZE_URLS = 100 * 1024
 
 # ref: file-4.23.tar.gz/magic/Magdir/sgml
 html_regex = "(?ims).*<\s*(!DOCTYPE html|html|head|title|body)"
@@ -24,7 +24,7 @@ def is_html(data):
         return True
 
 def has_urls(data, url=None):
-    if data: 
+    if data:
         try:
             next(spider.findall(data, url))
             return True

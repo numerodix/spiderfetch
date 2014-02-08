@@ -3,15 +3,12 @@
 # <desc> Web spider and fetcher </desc>
 
 import os
-import re
 import sys
-import tempfile
 import traceback
 
 from lib import ansicolor
 
 import fetch
-import filetype
 import ioutils
 import recipe
 import shutil
@@ -21,16 +18,16 @@ import urlrewrite
 import web
 
 
-SAVE_INTERVAL = 60*30
+SAVE_INTERVAL = 60 * 30
 LAST_SAVE = time.time()
 
 def save_session(wb, queue=None):
     hostname = urlrewrite.get_hostname(wb.root.url)
     filename = urlrewrite.hostname_to_filename(hostname)
     ioutils.write_err("Saving session to %s ..." %
-         ansicolor.yellow(filename+".{web,session}"))
+                      ansicolor.yellow(filename + ".{web,session}"))
     ioutils.serialize(wb, filename + ".web", dir=ioutils.LOGDIR)
-    if queue: 
+    if queue:
         ioutils.serialize(queue, filename + ".session", dir=ioutils.LOGDIR)
     # only web being saved, ie. spidering complete, remove old session
     elif ioutils.file_exists(filename + ".session", dir=ioutils.LOGDIR):
@@ -51,12 +48,12 @@ def restore_session(url):
     q, wb = None, None
     if (ioutils.file_exists(filename + ".web", dir=ioutils.LOGDIR)):
         ioutils.write_err("Restoring web from %s ..." %
-             ansicolor.yellow(filename+".web"))
+                          ansicolor.yellow(filename + ".web"))
         wb = ioutils.deserialize(filename + ".web", dir=ioutils.LOGDIR)
         ioutils.write_err(ansicolor.green("done\n"))
     if (ioutils.file_exists(filename + ".session", dir=ioutils.LOGDIR)):
         ioutils.write_err("Restoring session from %s ..." %
-             ansicolor.yellow(filename+".session"))
+                          ansicolor.yellow(filename + ".session"))
         q = ioutils.deserialize(filename + ".session", dir=ioutils.LOGDIR)
         q = recipe.overrule_records(q)
         ioutils.write_err(ansicolor.green("done\n"))
@@ -100,11 +97,11 @@ def qualify_urls(ref_url, urls, rule, newqueue, wb):
         if recipe.apply_mask(rule.get("fetch"), url):
             _fetch = True
         if (recipe.apply_mask(rule.get("spider"), url) and
-            recipe.apply_hostfilter(rule.get("host_filter"), url)):
+                recipe.apply_hostfilter(rule.get("host_filter"), url)):
             _spider = True
 
         # build a record based on qualification
-        record = {"url" : url}
+        record = {"url": url}
         if url not in wb:
             if _dump:
                 ioutils.write_out("%s\n" % url)
@@ -151,7 +148,7 @@ def process_records(queue, rule, wb):
 
             if record.get("mode") == fetch.Fetcher.FETCH:
                 shutil.move(filename,
-                  ioutils.safe_filename(urlrewrite.url_to_filename(url)))
+                            ioutils.safe_filename(urlrewrite.url_to_filename(url)))
 
         except (fetch.DuplicateUrlWarning, fetch.UrlRedirectsOffHost):
             pass
@@ -166,7 +163,8 @@ def process_records(queue, rule, wb):
             try:
                 if filename and os.path.exists(filename):
                     os.unlink(filename)
-                if fp: os.close(fp)
+                if fp:
+                    os.close(fp)
             except (NameError, OSError):
                 pass
 
@@ -203,13 +201,13 @@ def main(queue, rules, wb):
         outer_queue, queue = [], outer_queue
 
         while queue:
-            if depth > 0: 
+            if depth > 0:
                 depth -= 1
-            elif depth == 0: 
+            elif depth == 0:
             # There may still be records in the queue, but since depth is reached
             # no more spidering is allowed, so we allow one more iteration, but
             # only for fetching
-                queue, outer_queue = split_queue(queue, rules.index(rule) == len(rules)-1)
+                queue, outer_queue = split_queue(queue, rules.index(rule) == len(rules) - 1)
 
             queue = process_records(queue, rule, wb)
 

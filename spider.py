@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 
-import itertools
 import re
 import urllib
 
@@ -64,8 +63,8 @@ def spider_ftp(s):
     lines = s.splitlines()
     filler = ""
     for line in lines:
-        it = re.finditer(FTP_LISTING, filler+line)
-        filler += (2+len(line))*" "
+        it = re.finditer(FTP_LISTING, filler + line)
+        filler += (2 + len(line)) * " "
         for match in it:
             yield match
 
@@ -82,7 +81,7 @@ def findall(s, url=None):
     if url and urlrewrite.get_scheme(url) == "ftp":
         its.append(spider_ftp(s))
     for (idx, it) in enumerate(its):
-        for match in it: 
+        for match in it:
             yield match
 
 def unbox_it_to_ss(it):
@@ -94,7 +93,7 @@ def group_by_regex(s, url=None):
     if url and urlrewrite.get_scheme(url) == "ftp":
         its.append(spider_ftp(s))
     for (idx, it) in enumerate(its):
-        for match in it: 
+        for match in it:
             yield (idx, match)
 
 def unique(it):

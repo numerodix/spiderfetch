@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 import ftplib
-from compat import httplib
 import os
 import re
 import socket
@@ -46,16 +45,28 @@ socket.setdefaulttimeout(timeout)
 # log downloads
 os.environ["LOGGING"] = str(True)
 
-CHECKSUM_SIZE = 10*1024
+CHECKSUM_SIZE = 10 * 1024
 
 RETRY_WAIT = 10
 
-class ErrorAlreadyProcessed(Exception): pass
-class ZeroDataError(Exception): pass
-class DuplicateUrlWarning(Exception): pass
-class UrlRedirectsOffHost(Exception): pass
-class ResumeChecksumFailed(Exception): pass
-class ResumeNotSupported(Exception): pass
+class ErrorAlreadyProcessed(Exception):
+    pass
+
+class ZeroDataError(Exception):
+    pass
+
+class DuplicateUrlWarning(Exception):
+    pass
+
+class UrlRedirectsOffHost(Exception):
+    pass
+
+class ResumeChecksumFailed(Exception):
+    pass
+
+class ResumeNotSupported(Exception):
+    pass
+
 class ChangedUrlWarning(Exception):
     def __init__(self, new_url):
         self.new_url = new_url
@@ -112,10 +123,14 @@ err = err()     # XXX ugly, but it's messy enough to do this on an instance
 # Override ftpwrapper from urllib to change ntransfercmd call, now using 'rest'
 class Myftpwrapper(ftpwrapper):
     def retrfile(self, file, type, rest=None):
-        import ftplib
+        import ftplib  # noqa
         self.endtransfer()
-        if type in ('d', 'D'): cmd = 'TYPE A'; isdir = 1
-        else: cmd = 'TYPE ' + type; isdir = 0
+        if type in ('d', 'D'):
+            cmd = 'TYPE A'
+            isdir = 1
+        else:
+            cmd = 'TYPE ' + type
+            isdir = 0
         try:
             self.ftp.voidcmd(cmd)
         except ftplib.all_errors:
@@ -134,13 +149,15 @@ class Myftpwrapper(ftpwrapper):
             # Set transfer mode to ASCII!
             self.ftp.voidcmd('TYPE A')
             # Try a directory listing
-            if file: cmd = 'LIST ' + file
-            else: cmd = 'LIST'
+            if file:
+                cmd = 'LIST ' + file
+            else:
+                cmd = 'LIST'
             conn = self.ftp.ntransfercmd(cmd)
         self.busy = 1
         # Pass back both a suitably decorated object and a retrieval length
         return (urllib.addclosehook(conn[0].makefile('rb'),
-                             self.endtransfer), conn[1])
+                                    self.endtransfer), conn[1])
 
 class MyURLopener(FancyURLopener):
     checksum_size = CHECKSUM_SIZE
@@ -153,19 +170,19 @@ class MyURLopener(FancyURLopener):
     def prompt_user_passwd(self, host, realm):
         """Don't prompt for credentials"""
         return None, None
-    
+
     def http_error_default(self, url, fp, errcode, errmsg, headers):
         if os.environ.get("SILENT_REDIRECT"):
-            return urllib.FancyURLopener.http_error_default(\
-                    self, url, fp, errcode, errmsg, headers)
+            return urllib.FancyURLopener.http_error_default(
+                self, url, fp, errcode, errmsg, headers)
 
-        self.fetcher.handle_error(eval('err.http_'+str(errcode)))
+        self.fetcher.handle_error(eval('err.http_' + str(errcode)))
         raise ErrorAlreadyProcessed
 
     def redirect_internal(self, url, fp, errcode, errmsg, headers, data):
         if os.environ.get("SILENT_REDIRECT"):
-            return urllib.FancyURLopener.redirect_internal(\
-                    self, url, fp, errcode, errmsg, headers, data)
+            return urllib.FancyURLopener.redirect_internal(
+                self, url, fp, errcode, errmsg, headers, data)
 
         if 'location' in headers:
             newurl = headers['location']
@@ -213,9 +230,9 @@ class MyURLopener(FancyURLopener):
                 hdrs = fp.info()
                 del fp
                 return urllib.url2pathname(urllib.splithost(url1)[1]), hdrs
-            except IOError as msg:
+            except IOError:
                 pass
-        bs = 1024*8
+        bs = 1024 * 8
         size = -1
         read = 0
         blocknum = 0
@@ -228,7 +245,7 @@ class MyURLopener(FancyURLopener):
         if cont:
             if (self.fetcher.proto == self.fetcher.PROTO_HTTP and
                 not (headers.dict.get("content-range") or
-                    headers.dict.get("Content-Range"))):
+                     headers.dict.get("Content-Range"))):
                 raise ResumeNotSupported
             tfp = open(filename, 'rb+')
             tfp.seek(-self.checksum_size, os.SEEK_END)
@@ -273,7 +290,8 @@ class MyURLopener(FancyURLopener):
         """Use FTP protocol."""
         if not isinstance(url, str):
             raise IOError(('ftp error', 'proxy support for ftp protocol currently not implemented'))
-        import mimetypes, mimetools
+        import mimetypes
+        import mimetools
         try:
             from cStringIO import StringIO
         except ImportError:
@@ -283,14 +301,16 @@ class MyURLopener(FancyURLopener):
             raise IOError(('ftp error', 'no host given'))
         host, port = urllib.splitport(host)
         user, host = urllib.splituser(host)
-        if user: user, passwd = urllib.splitpasswd(user)
-        else: passwd = None
+        if user:
+            user, passwd = urllib.splitpasswd(user)
+        else:
+            passwd = None
         host = urllib.unquote(host)
         user = urllib.unquote(user or '')
         passwd = urllib.unquote(passwd or '')
         host = socket.gethostbyname(host)
         if not port:
-            import ftplib
+            import ftplib  # noqa
             port = ftplib.FTP_PORT
         else:
             port = int(port)
@@ -298,8 +318,10 @@ class MyURLopener(FancyURLopener):
         path = urllib.unquote(path)
         dirs = path.split('/')
         dirs, file = dirs[:-1], dirs[-1]
-        if dirs and not dirs[0]: dirs = dirs[1:]
-        if dirs and not dirs[0]: dirs[0] = '/'
+        if dirs and not dirs[0]:
+            dirs = dirs[1:]
+        if dirs and not dirs[0]:
+            dirs[0] = '/'
         key = user, host, port, '/'.join(dirs)
         # XXX thread unsafe!
         if len(self.ftpcache) > urllib.MAXFTPCACHE:
@@ -313,15 +335,17 @@ class MyURLopener(FancyURLopener):
             if not key in self.ftpcache:
                 self.ftpcache[key] = \
                     Myftpwrapper(user, passwd, host, port, dirs)
-            if not file: type = 'D'
-            else: type = 'I'
+            if not file:
+                type = 'D'
+            else:
+                type = 'I'
             for attr in attrs:
                 attr, value = urllib.splitvalue(attr)
                 if attr.lower() == 'type' and \
                    value in ('a', 'A', 'i', 'I', 'd', 'D'):
                     type = value.upper()
-            (fp, retrlen) = self.ftpcache[key].retrfile(file, type, 
-                                                rest=os.environ.get("REST"))
+            (fp, retrlen) = self.ftpcache[key].retrfile(file, type,
+                                                        rest=os.environ.get("REST"))
             mtype = mimetypes.guess_type("ftp:" + url)[0]
             headers = ""
             if mtype:
@@ -346,7 +370,7 @@ class Fetcher(object):
     ratewidth = 10
     sizewidth = 10
     urlwidth = linewidth - actionwidth - ratewidth - sizewidth - 7  # 7 for spaces
-    units = { 0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB", 6: "EB"}
+    units = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB", 5: "PB", 6: "EB"}
 
     def __init__(self, mode=FETCH, url=None, filename=None):
         self._opener = MyURLopener(self)
@@ -415,7 +439,7 @@ class Fetcher(object):
                 ioutils.savelog(line, "log_urls", "a")
 
     def format_size(self, size):
-        if size == None:
+        if size is None:
             size = -1
 
         c = 0
@@ -473,7 +497,7 @@ class Fetcher(object):
         line = "%s ::  %s  " % (action, rate)
 
         term = (os.environ.get("DEBUG_FETCH") and "\n") or "\r"
-        if error or complete: 
+        if error or complete:
             term = "\n"
         ioutils.write_err("%s%s%s%s" % (line, url, size, term))
 
@@ -527,8 +551,8 @@ class Fetcher(object):
     def inner_load_url(self):
         cont = False
         if not self.mode == self.SPIDER:
-            if (os.environ.get("CONT") and os.path.exists(self.filename) and
-                os.path.getsize(self.filename) > 0):
+            if (os.environ.get("CONT") and os.path.exists(self.filename)
+                    and os.path.getsize(self.filename) > 0):
                 cont = True
 
         # init vars here as we might start fetching from a non-zero position
@@ -536,8 +560,8 @@ class Fetcher(object):
         self.started = True
 
         (_, headers) = self._opener.retrieve(self.url, self.filename,
-            reporthook=self.fetch_hook, cont=cont)
-        
+                                             reporthook=self.fetch_hook, cont=cont)
+
 
     def load_url(self):
         self.write_progress(prestart=True)
@@ -580,7 +604,7 @@ class Fetcher(object):
             self.error = None
 
             self.load_url()
-        except ChangedUrlWarning as e:
+        except ChangedUrlWarning:
             self.handle_error(err.redirect)
             raise
         except filetype.WrongFileTypeError:
@@ -596,7 +620,7 @@ class Fetcher(object):
         except ErrorAlreadyProcessed:
             pass
         except IOError as exc:
-            if exc and exc.args: 
+            if exc and exc.args:
                 if len(exc.args) == 2:
                     (_, errobj) = exc.args
                     if type(errobj) == socket.gaierror:
@@ -635,7 +659,7 @@ class Fetcher(object):
 
             # retry after a short delay
             self.write_progress(wait=True)
-            time.sleep(self.retry_wait)  
+            time.sleep(self.retry_wait)
 
 
 
@@ -662,7 +686,8 @@ if __name__ == "__main__":
             (fp, filename) = ioutils.get_tempfile()
             Fetcher(mode=Fetcher.SPIDER, url=url,
                     filename=filename).launch_w_tries()
-            os.close(fp) ; os.unlink(filename)
+            os.close(fp)
+            os.unlink(filename)
         else:
             args = list(args)
             if len(args) <= 5:

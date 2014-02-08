@@ -13,7 +13,8 @@ SCHEMES = ["ftp", "http", "https"]
 _scheme = "(?P<scheme>%s)$" % "".join(reduce(lambda x, y: "%s|%s" % (x, y), SCHEMES))
 scheme_regex = re.compile(_scheme)
 
-class InvalidUrl(Exception): pass
+class InvalidUrl(Exception):
+    pass
 
 def rewrite_scheme(scheme):
     m = re.search(scheme_regex, scheme)
@@ -50,7 +51,7 @@ def truncate_url(width, s):
         w = width - len(filler)
         half = w // 2
         rest = w % 2
-        s = s[:half+rest] + filler + s[-half:]
+        s = s[:half + rest] + filler + s[-half:]
     return s
 
 def rewrite_urls(origin_url, urls):
@@ -68,8 +69,8 @@ def rewrite_urls(origin_url, urls):
 
         # rewrite netloc to include credentials
         if origin_pack.username and pack.hostname == origin_pack.hostname:
-            netloc = assemble_netloc(origin_pack.username,\
-                        origin_pack.password, pack.hostname, pack.port)
+            netloc = assemble_netloc(origin_pack.username,
+                                     origin_pack.password, pack.hostname, pack.port)
 
         # reassemble into url
         new_u = urlparse.urlunsplit((scheme, netloc, path, query, None))

@@ -63,7 +63,7 @@ def load_recipe(filename, url):
     return rewrite_recipe(l.get("recipe"), url)
 
 def get_recipe(pattern, url):
-    recipe = [{ "spider": ".*", "fetch": pattern }]
+    recipe = [{"spider": ".*", "fetch": pattern}]
     return rewrite_recipe(recipe, url)
 
 def get_queue(url, mode=None):
