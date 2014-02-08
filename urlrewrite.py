@@ -77,7 +77,7 @@ def rewrite_urls(origin_url, urls):
 
         # no scheme or netloc, it's a path on-site
         if not scheme and not netloc and (path or query):
-            path_query = urlparse.urlunsplit((None, None, path, query, None))
+            path_query = urlparse.urlunsplit(('', '', path, query, ''))
             new_u = urlparse.urljoin(origin_url, path_query)
 
         # quote spaces
