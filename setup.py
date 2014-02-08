@@ -1,8 +1,11 @@
 from setuptools import setup, find_packages
 
+import spiderfetch
+
+
 setup(
     name='spiderfetch',
-    version='0.1',
+    version=spiderfetch.__version__,
     description='Web spider and fetcher',
     author='Martin Matusiak',
     author_email='numerodix@gmail.com',
@@ -12,4 +15,10 @@ setup(
 
     # don't install as zipped egg
     zip_safe=False,
+
+    entry_points={
+        "console_scripts": [
+            "spiderfetch = spiderfetch.spiderfetch:run_script",
+        ]
+    },
 )

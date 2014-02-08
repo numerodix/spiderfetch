@@ -215,7 +215,7 @@ def main(queue, rules, wb):
     save_session(wb)
 
 
-if __name__ == "__main__":
+def run_script():
     (parser, a) = ioutils.init_opts("<url> ['<pattern>'] [options]")
     a("--recipe", metavar="<recipe>", dest="recipe", help="Use a spidering recipe")
     a("--fetch", action="store_true", help="Fetch urls, don't dump")
@@ -251,3 +251,7 @@ if __name__ == "__main__":
     except IndexError:
         ioutils.opts_help(None, None, None, parser)
     main(queue, rules, wb)
+
+
+if __name__ == "__main__":
+    run_script()
