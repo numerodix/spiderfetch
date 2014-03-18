@@ -1,10 +1,18 @@
-= Install
-
-pip install spiderfetch
-
 spiderfetch
+===========
 
-= Run from checkout
+
+Install
+-------
+
+.. code:: bash
+
+    pip install spiderfetch
+    spiderfetch
+
+
+Run from checkout
+-----------------
 
 python -m spiderfetch.fetch
 python -m spiderfetch.spider
