@@ -14,6 +14,8 @@ Install
 Run from checkout
 -----------------
 
-python -m spiderfetch.fetch
-python -m spiderfetch.spider
-python -m spiderfetch.spiderfetch
+.. code:: bash
+
+    python -m spiderfetch.fetch
+    python -m spiderfetch.spider
+    python -m spiderfetch.spiderfetch
