@@ -10,6 +10,7 @@ setup(
     description='Web spider and fetcher',
     author='Martin Matusiak',
     author_email='numerodix@gmail.com',
+    url='https://github.com/numerodix/spiderfetch',
 
     packages=find_packages('.'),
     package_dir = {'': '.'},
