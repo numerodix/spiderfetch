@@ -10,13 +10,14 @@ import sys
 import traceback
 import time
 
+import ansicolor
+
 from spiderfetch import fetch
 from spiderfetch import ioutils
 from spiderfetch import recipe
 from spiderfetch import spider
 from spiderfetch import urlrewrite
 from spiderfetch import web
-from spiderfetch.lib import ansicolor
 
 
 SAVE_INTERVAL = 60 * 30

@@ -8,8 +8,9 @@ import os
 import tempfile
 import sys
 
+import ansicolor
+
 from spiderfetch.compat import pickle
-from spiderfetch.lib import ansicolor
 
 
 _help_header = "spiderfetch tool suite\n\n"

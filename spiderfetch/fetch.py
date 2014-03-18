@@ -11,6 +11,8 @@ import sys
 import time
 import urllib
 
+import ansicolor
+
 from spiderfetch import filetype
 from spiderfetch import ioutils
 from spiderfetch import urlrewrite
@@ -20,7 +22,6 @@ from spiderfetch.compat import ftpwrapper
 from spiderfetch.compat import splittype
 from spiderfetch.compat import unwrap
 from spiderfetch.compat import urlparse
-from spiderfetch.lib import ansicolor
 
 
 """ testurls
