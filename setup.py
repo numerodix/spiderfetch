@@ -1,8 +1,13 @@
+import os
+
 from setuptools import find_packages
 from setuptools import setup
 
 import spiderfetch
 
+
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
     name='spiderfetch',
@@ -14,6 +19,8 @@ setup(
 
     packages=find_packages('.'),
     package_dir = {'': '.'},
+
+    install_requires=read('requirements.txt'),
 
     # don't install as zipped egg
     zip_safe=False,
