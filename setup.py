@@ -20,7 +20,9 @@ setup(
     packages=find_packages('.'),
     package_dir = {'': '.'},
 
-    install_requires=read('requirements.txt'),
+    install_requires=[
+        'ansicolor',
+    ],
 
     # don't install as zipped egg
     zip_safe=False,
