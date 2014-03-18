@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-import pickle
+from __future__ import absolute_import
+from __future__ import print_function
+
 import sys
 
-from lib import ansicolor
-
-import ioutils
+from spiderfetch import ioutils
+from spiderfetch.lib import ansicolor
 
 
 class Node(object):
@@ -64,12 +65,13 @@ class Web(object):
         if url not in self.index:
             ioutils.write_err("Url %s not in the web\n" % ansicolor.yellow(url))
             sys.exit(1)
-        
+
     def print_refs(self, url, out=True):
         self.assert_in_web(url)
         node = self.index.get(url)
         l = node.outgoing
-        if not out: l = node.incoming
+        if not out:
+            l = node.incoming
         for u in l:
             ioutils.write_out("%s\n" % u)
 
@@ -114,7 +116,7 @@ class Web(object):
         if path:
             ioutils.write_err("Showing trace from root:\n")
             for (i, hop) in enumerate(path):
-                ioutils.write_err(" %s  %s\n" % (str(i).rjust(1+(len(path)/10)), hop))
+                ioutils.write_err(" %s  %s\n" % (str(i).rjust(1 + (len(path) / 10)), hop))
 
     def print_popular(self):
         tuples = [(len(n.incoming), n) for n in self.index.values()]
@@ -142,11 +144,11 @@ class Web(object):
                     if aliases.index(url) == 0:
                         prefix = str(count).rjust(ln)
                     ioutils.write_err(" %s  %s\n" % (prefix, url))
-                if not ss.index(pair) == len(ss)-1:
+                if not ss.index(pair) == len(ss) - 1:
                     ioutils.write_err("\n")
 
     def print_stats(self):
-        s  = "Root url : %s\n" % self.root.url
+        s = "Root url : %s\n" % self.root.url
         s += "Web size : %s urls\n" % len(self.index)
         ioutils.write_err(s)
 
@@ -159,8 +161,8 @@ class Web(object):
             for n in node.outgoing:
                 node.outgoing[n] = None
         #for node in self.index.values():
-        #    print node.incoming
-        #    print node.outgoing
+        #    print(node.incoming)
+        #    print(node.outgoing)
 
     def _from_pickle(self):
         for node in self.index.values():
@@ -190,15 +192,15 @@ if __name__ == "__main__":
             wb.index["a"] = wb.root
             wb.index["b"] = Node("b")
             wb.index["c"] = Node("c")
-            #wb.index["b"].incoming["a"] = wb.root      # cut link from a to b
-            wb.index["b"].incoming["c"] = wb.index["c"] # create loop b <-> c
+            #wb.index["b"].incoming["a"] = wb.root       # cut link from a to b
+            wb.index["b"].incoming["c"] = wb.index["c"]  # create loop b <-> c
             wb.index["c"].incoming["b"] = wb.index["b"]
             ioutils.serialize(wb, "web")
             wb = ioutils.deserialize("web")
-            print "Root :", wb.root.url
-            print "Index:", wb.index
-            print "b.in :", wb.index['b'].incoming
-            print "c.in :", wb.index['c'].incoming
+            print("Root :", wb.root.url)
+            print("Index:", wb.index)
+            print("b.in :", wb.index['b'].incoming)
+            print("c.in :", wb.index['c'].incoming)
             wb.print_trace(wb.get_trace("c"))   # inf loop if loop not detected
             sys.exit()
 

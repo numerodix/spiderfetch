@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+from __future__ import print_function
+
+from functools import reduce
 import os
 import re
-import urlparse
+
+from spiderfetch.compat import urlparse
 
 
 SCHEMES = ["ftp", "http", "https"]
@@ -10,7 +15,8 @@ SCHEMES = ["ftp", "http", "https"]
 _scheme = "(?P<scheme>%s)$" % "".join(reduce(lambda x, y: "%s|%s" % (x, y), SCHEMES))
 scheme_regex = re.compile(_scheme)
 
-class InvalidUrl(Exception): pass
+class InvalidUrl(Exception):
+    pass
 
 def rewrite_scheme(scheme):
     m = re.search(scheme_regex, scheme)
@@ -45,9 +51,9 @@ def truncate_url(width, s):
     if len(s) > width:
         filler = "..."
         w = width - len(filler)
-        half = w / 2
+        half = w // 2
         rest = w % 2
-        s = s[:half+rest] + filler + s[-half:]
+        s = s[:half + rest] + filler + s[-half:]
     return s
 
 def rewrite_urls(origin_url, urls):
@@ -65,15 +71,15 @@ def rewrite_urls(origin_url, urls):
 
         # rewrite netloc to include credentials
         if origin_pack.username and pack.hostname == origin_pack.hostname:
-            netloc = assemble_netloc(origin_pack.username,\
-                        origin_pack.password, pack.hostname, pack.port)
+            netloc = assemble_netloc(origin_pack.username,
+                                     origin_pack.password, pack.hostname, pack.port)
 
         # reassemble into url
         new_u = urlparse.urlunsplit((scheme, netloc, path, query, None))
 
         # no scheme or netloc, it's a path on-site
         if not scheme and not netloc and (path or query):
-            path_query = urlparse.urlunsplit((None, None, path, query, None))
+            path_query = urlparse.urlunsplit(('', '', path, query, ''))
             new_u = urlparse.urljoin(origin_url, path_query)
 
         # quote spaces
@@ -107,4 +113,4 @@ if __name__ == "__main__":
     urls = ["../index.php?name=jack&act=whatever",
             "http://www.juventuz.com/matches"]
     for u in rewrite_urls(base, urls):
-        print u
+        print(u)

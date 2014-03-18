@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
-import itertools
+from __future__ import absolute_import
+from __future__ import print_function
+
 import re
 import urllib
 
-from lib import ansicolor
-
-import ioutils
-import urlrewrite
+from spiderfetch import ioutils
+from spiderfetch import urlrewrite
+from spiderfetch.lib import ansicolor
 
 
 testcases = """\
@@ -62,8 +63,8 @@ def spider_ftp(s):
     lines = s.splitlines()
     filler = ""
     for line in lines:
-        it = re.finditer(FTP_LISTING, filler+line)
-        filler += (2+len(line))*" "
+        it = re.finditer(FTP_LISTING, filler + line)
+        filler += (2 + len(line)) * " "
         for match in it:
             yield match
 
@@ -80,7 +81,7 @@ def findall(s, url=None):
     if url and urlrewrite.get_scheme(url) == "ftp":
         its.append(spider_ftp(s))
     for (idx, it) in enumerate(its):
-        for match in it: 
+        for match in it:
             yield match
 
 def unbox_it_to_ss(it):
@@ -92,7 +93,7 @@ def group_by_regex(s, url=None):
     if url and urlrewrite.get_scheme(url) == "ftp":
         its.append(spider_ftp(s))
     for (idx, it) in enumerate(its):
-        for match in it: 
+        for match in it:
             yield (idx, match)
 
 def unique(it):
@@ -133,8 +134,8 @@ if __name__ == "__main__":
 
         if opts.dump:
             for u in unique(unbox_it_to_ss(findall(data, url))):
-                print u
+                print(u)
         else:
-            print colorize_shell(data, url)
+            print(colorize_shell(data, url))
     except IndexError:
         ioutils.opts_help(None, None, None, parser)

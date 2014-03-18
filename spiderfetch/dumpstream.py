@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
-import optparse
 import os
 import subprocess
 import sys
 import traceback
 
-import ioutils
+from spiderfetch import ioutils
 
 
 
@@ -27,8 +26,8 @@ def main():
             line = sys.stdin.readline()
     except KeyboardInterrupt:
         ioutils.write_abort()
-    except Exception, e:
-        s  = "%s\n" % traceback.format_exc()
+    except Exception as e:
+        s = "%s\n" % traceback.format_exc()
         s += "%s\n" % str(e)
         s += "Invocation string: %s\n" % str(args)
         ioutils.write_err(s)
