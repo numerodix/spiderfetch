@@ -20,8 +20,23 @@ Installation
 Usage
 -----
 
-Fetch all urls matching ``*.ogg`` from a page:
+
+Fetching
+^^^^^^^^
+
+Fetch all urls matching ``2008.*.ogg`` from a page:
 
 .. code:: bash
 
     $ spiderfetch http://www.fosdem.org/2008/media/video 2008.*ogg
+
+
+Spidering
+^^^^^^^^^
+
+Spider a site to depth ``3`` while pausing ``2`` seconds between fetches. The
+urls that will be considered when spidering must match ``.*``:
+
+.. code:: bash
+
+    $ spiderfetch --host http://en.wikipedia.org --depth 3 --pause 2 '.*'
