@@ -30,6 +30,12 @@ Fetch all urls matching ``2008.*.ogg`` from a page:
 
     $ spiderfetch http://www.fosdem.org/2008/media/video 2008.*ogg
 
+To dump the urls to a file instead of fetching:
+
+.. code:: bash
+
+    $ spiderfetch http://www.fosdem.org/2008/media/video 2008.*ogg --dump > urls
+
 
 Spidering
 ^^^^^^^^^
