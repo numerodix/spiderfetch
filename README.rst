@@ -8,8 +8,8 @@ spiderfetch
     :target: https://travis-ci.org/numerodix/spiderfetch
 
 
-Install
--------
+Installation
+------------
 
 .. code:: bash
 
@@ -17,11 +17,11 @@ Install
     $ spiderfetch
 
 
-Run from checkout
------------------
+Usage
+-----
+
+Fetch all urls matching ``*.ogg`` from a page:
 
 .. code:: bash
 
-    $ python -m spiderfetch.fetch
-    $ python -m spiderfetch.spider
-    $ python -m spiderfetch.spiderfetch
+    $ spiderfetch http://www.fosdem.org/2008/media/video 2008.*ogg
