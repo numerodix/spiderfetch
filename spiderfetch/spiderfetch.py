@@ -73,18 +73,18 @@ class SpiderFetcher(object):
     def __init__(self, session):
         self.session = session
 
-    def log_exc(self, exc, url, wb):
+    def log_exc(self, exc, url):
         exc_filename = ioutils.safe_filename("exc", dir=ioutils.LOGDIR)
         ioutils.serialize(exc, exc_filename, dir=ioutils.LOGDIR)
         s = traceback.format_exc()
         s += "\nBad url:   |%s|\n" % url
-        node = wb.get(url)
+        node = self.session.wb.get(url)
         for u in node.incoming.keys():
             s += "Ref    :   |%s|\n" % u
         s += "Exception object serialized to file: %s\n\n" % exc_filename
         ioutils.savelog(s, "error_log", "a")
 
-    def get_url(self, fetcher, wb, host_filter=False):
+    def get_url(self, fetcher, host_filter=False):
         """http 30x redirects produce a recursion with new urls that may or may not
         have been seen before"""
         while True:
@@ -93,15 +93,15 @@ class SpiderFetcher(object):
                 break
             except fetch.ChangedUrlWarning as e:
                 url = urlrewrite.rewrite_urls(fetcher.url, [e.new_url]).next()
-                if url in wb:
+                if url in self.session.wb:
                     raise fetch.DuplicateUrlWarning
                 if not recipe.apply_hostfilter(host_filter, url):
                     raise fetch.UrlRedirectsOffHost
-                wb.add_ref(fetcher.url, url)
+                self.session.wb.add_ref(fetcher.url, url)
                 fetcher.url = url
         return fetcher.url
 
-    def qualify_urls(self, ref_url, urls, rule, newqueue, wb):
+    def qualify_urls(self, ref_url, urls, rule, newqueue):
         for url in urls:
             _dump, _fetch, _spider = False, False, False
 
@@ -116,7 +116,7 @@ class SpiderFetcher(object):
 
             # build a record based on qualification
             record = {"url": url}
-            if url not in wb:
+            if url not in self.session.wb:
                 if _dump:
                     ioutils.write_out("%s\n" % url)
                 if _fetch and _spider:
@@ -131,34 +131,34 @@ class SpiderFetcher(object):
 
             # add url to web if it was matched by anything
             if _dump or _fetch or _spider:
-                wb.add_url(ref_url, [url])
+                self.session.wb.add_url(ref_url, [url])
 
-        return newqueue, wb
+        return newqueue
 
-    def process_records(self, queue, rule, wb):
+    def process_records(self, rule):
         newqueue = []
-        for record in queue:
-            self.session.maybe_save(wb, queue)
+        for record in self.session.queue:
+            self.session.maybe_save(self.session.wb, self.session.queue)
 
             url = record.get("url")
             try:
                 (fp, filename) = ioutils.get_tempfile()
                 f = fetch.Fetcher(mode=record.get("mode"), url=url, filename=filename)
-                url = self.get_url(f, wb, host_filter=rule.get("host_filter"))
+                url = self.get_url(f, host_filter=rule.get("host_filter"))
                 filename = f.filename
 
                 # consider retrying the fetch if it failed
                 if f.error and fetch.err.is_temporal(f.error):
                     if not record.get("retry"):
                         record["retry"] = True
-                        queue.append(record)
+                        self.session.queue.append(record)
 
                 if record.get("mode") == fetch.Fetcher.SPIDER:
                     data = open(filename, 'r').read()
                     urls = spider.unbox_it_to_ss(spider.findall(data, url))
                     urls = urlrewrite.rewrite_urls(url, urls)
 
-                    (newqueue, wb) = self.qualify_urls(url, urls, rule, newqueue, wb)
+                    newqueue = self.qualify_urls(url, urls, rule, newqueue)
 
                 if record.get("mode") == fetch.Fetcher.FETCH:
                     shutil.move(filename,
@@ -167,12 +167,12 @@ class SpiderFetcher(object):
             except (fetch.DuplicateUrlWarning, fetch.UrlRedirectsOffHost):
                 pass
             except KeyboardInterrupt:
-                q = queue[queue.index(record):]
+                q = self.session.queue[self.session.queue.index(record):]
                 q.extend(newqueue)
-                self.session.save(wb, queue=q)
+                self.session.save(self.session.wb, queue=q)
                 sys.exit(1)
             except Exception as exc:
-                self.log_exc(exc, url, wb)
+                self.log_exc(exc, url)
             finally:
                 try:
                     if filename and os.path.exists(filename):
@@ -188,9 +188,9 @@ class SpiderFetcher(object):
 
         return newqueue
 
-    def split_queue(self, queue, lastrule=False):
+    def split_queue(self, lastrule=False):
         fetch_queue, spider_queue = [], []
-        for record in queue:
+        for record in self.session.queue:
             mode = record.get("mode")
             if mode == fetch.Fetcher.FETCH or mode == fetch.Fetcher.SPIDER_FETCH:
                 r = record.copy()
@@ -223,10 +223,9 @@ class SpiderFetcher(object):
                 # only for fetching
                 elif depth == 0:
                     self.session.queue, outer_queue = self.split_queue(
-                        self.session.queue,
                         self.session.rules.index(rule) == len(self.session.rules) - 1)
 
-                self.session.queue = self.process_records(self.session.queue, rule, self.session.wb)
+                self.session.queue = self.process_records(rule)
 
         self.session.save(self.session.wb)
 
