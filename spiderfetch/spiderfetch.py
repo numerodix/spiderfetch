@@ -243,14 +243,18 @@ def run_script():
             os.environ["DEPTH"] = str(opts.depth)
 
         url = args[0]
-        (w, q) = Session.restore(url)
+        (wb, queue) = Session.restore(url)
         if opts.recipe:
             rules = recipe.load_recipe(opts.recipe, url)
         else:
             pattern = args[1]
             rules = recipe.get_recipe(pattern, url)
-        queue = q or recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
-        wb = w or web.Web(url)
+
+        if queue is None:
+            queue = recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
+        if wb is None:
+            wb = web.Web(url)
+
     except recipe.PatternError as e:
         ioutils.write_err(ansicolor.red("%s\n" % e))
         sys.exit(1)
