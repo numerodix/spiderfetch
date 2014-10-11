@@ -21,9 +21,10 @@ from spiderfetch import web
 
 
 class Session(object):
-    def __init__(self, wb, queue):
+    def __init__(self, wb=None, queue=None, rules=None):
         self.wb = wb
         self.queue = queue
+        self.rules = rules
 
         # well, not really, it may not have been saved yet
         self.last_save = time.time()
@@ -65,7 +66,7 @@ class Session(object):
             q = ioutils.deserialize(filename + ".session", dir=ioutils.LOGDIR)
             q = recipe.overrule_records(q)
             ioutils.write_err(ansicolor.green("done\n"))
-        return cls(wb, q)
+        return cls(wb=wb, queue=q)
 
 
 class SpiderFetcher(object):
@@ -249,12 +250,14 @@ def run_script():
             os.environ["DEPTH"] = str(opts.depth)
 
         url = args[0]
-        session = Session.restore(url)
         if opts.recipe:
             rules = recipe.load_recipe(opts.recipe, url)
         else:
             pattern = args[1]
             rules = recipe.get_recipe(pattern, url)
+
+        session = Session.restore(url)
+        session.rules = rules
 
         if session.queue is None:
             session.queue = recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
@@ -268,7 +271,7 @@ def run_script():
         ioutils.opts_help(None, None, None, parser)
 
     spiderfetcher = SpiderFetcher(session)
-    spiderfetcher.main(session.queue, rules, session.wb)
+    spiderfetcher.main(session.queue, session.rules, session.wb)
 
 
 if __name__ == "__main__":
