@@ -205,27 +205,30 @@ class SpiderFetcher(object):
                     spider_queue.append(r)
         return fetch_queue, spider_queue
 
-    def main(self, queue, rules, wb):
-        outer_queue = queue
-        for rule in rules:
+    def main(self):
+        outer_queue = self.session.queue
+        for rule in self.session.rules:
             depth = rule.get("depth", 1)
 
             # queue will be exhausted in inner loop, but once depth is reached
             # the contents to spider will fall through to outer_queue
-            outer_queue, queue = [], outer_queue
+            outer_queue, self.session.queue = [], outer_queue
 
-            while queue:
+            while self.session.queue:
                 if depth > 0:
                     depth -= 1
-                elif depth == 0:
+
                 # There may still be records in the queue, but since depth is reached
                 # no more spidering is allowed, so we allow one more iteration, but
                 # only for fetching
-                    queue, outer_queue = self.split_queue(queue, rules.index(rule) == len(rules) - 1)
+                elif depth == 0:
+                    self.session.queue, outer_queue = self.split_queue(
+                        self.session.queue,
+                        self.session.rules.index(rule) == len(self.session.rules) - 1)
 
-                queue = self.process_records(queue, rule, wb)
+                self.session.queue = self.process_records(self.session.queue, rule, self.session.wb)
 
-        self.session.save(wb)
+        self.session.save(self.session.wb)
 
 
 def run_script():
@@ -271,7 +274,7 @@ def run_script():
         ioutils.opts_help(None, None, None, parser)
 
     spiderfetcher = SpiderFetcher(session)
-    spiderfetcher.main(session.queue, session.rules, session.wb)
+    spiderfetcher.main()
 
 
 if __name__ == "__main__":
