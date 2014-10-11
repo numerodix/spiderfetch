@@ -8,7 +8,7 @@ env:
     - TOX_ENV=py34
 install:
     - sudo apt-get update
-    - sudo apt-get install python3.4
+    - sudo apt-get install python3.4 || echo "did not install python3.4, assuming present"
     - pip install tox
 script: tox -e $TOX_ENV
 notifications:
