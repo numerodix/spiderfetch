@@ -20,11 +20,11 @@ from spiderfetch import urlrewrite
 from spiderfetch import web
 
 
-class SpiderFetcher(object):
+class Session(object):
     SAVE_INTERVAL = 60 * 30
     LAST_SAVE = time.time()
 
-    def save_session(self, wb, queue=None):
+    def save(self, wb, queue=None):
         hostname = urlrewrite.get_hostname(wb.root.url)
         filename = urlrewrite.hostname_to_filename(hostname)
         ioutils.write_err("Saving session to %s ..." %
@@ -37,14 +37,14 @@ class SpiderFetcher(object):
             ioutils.delete(filename + ".session", dir=ioutils.LOGDIR)
         ioutils.write_err(ansicolor.green("done\n"))
 
-    def maybesave(self, wb, queue):
+    def maybe_save(self, wb, queue):
         t = time.time()
         if self.LAST_SAVE + self.SAVE_INTERVAL < t:
-            self.save_session(wb, queue=queue)
+            self.save(wb, queue=queue)
             self.LAST_SAVE = t
 
     @classmethod
-    def restore_session(cls, url):
+    def restore(cls, url):
         hostname = urlrewrite.get_hostname(url)
         filename = urlrewrite.hostname_to_filename(hostname)
         q, wb = None, None
@@ -60,6 +60,11 @@ class SpiderFetcher(object):
             q = recipe.overrule_records(q)
             ioutils.write_err(ansicolor.green("done\n"))
         return wb, q
+
+
+class SpiderFetcher(object):
+    def __init__(self):
+        self.session = Session()
 
     def log_exc(self, exc, url, wb):
         exc_filename = ioutils.safe_filename("exc", dir=ioutils.LOGDIR)
@@ -126,7 +131,7 @@ class SpiderFetcher(object):
     def process_records(self, queue, rule, wb):
         newqueue = []
         for record in queue:
-            self.maybesave(wb, queue)
+            self.session.maybe_save(wb, queue)
 
             url = record.get("url")
             try:
@@ -157,7 +162,7 @@ class SpiderFetcher(object):
             except KeyboardInterrupt:
                 q = queue[queue.index(record):]
                 q.extend(newqueue)
-                self.save_session(wb, queue=q)
+                self.session.save(wb, queue=q)
                 sys.exit(1)
             except Exception as exc:
                 self.log_exc(exc, url, wb)
@@ -213,7 +218,7 @@ class SpiderFetcher(object):
 
                 queue = self.process_records(queue, rule, wb)
 
-        self.save_session(wb)
+        self.session.save(wb)
 
 
 def run_script():
@@ -238,7 +243,7 @@ def run_script():
             os.environ["DEPTH"] = str(opts.depth)
 
         url = args[0]
-        (q, w) = SpiderFetcher.restore_session(url)
+        (w, q) = Session.restore(url)
         if opts.recipe:
             rules = recipe.load_recipe(opts.recipe, url)
         else:
