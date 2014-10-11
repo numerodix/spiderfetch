@@ -21,8 +21,14 @@ from spiderfetch import web
 
 
 class Session(object):
-    SAVE_INTERVAL = 60 * 30
-    LAST_SAVE = time.time()
+    def __init__(self, wb, queue):
+        self.wb = wb
+        self.queue = queue
+
+        # well, not really, it may not have been saved yet
+        self.last_save = time.time()
+
+        self.save_interval = 60 * 30  # 30min
 
     def save(self, wb, queue=None):
         hostname = urlrewrite.get_hostname(wb.root.url)
@@ -39,9 +45,9 @@ class Session(object):
 
     def maybe_save(self, wb, queue):
         t = time.time()
-        if self.LAST_SAVE + self.SAVE_INTERVAL < t:
+        if self.last_save + self.save_interval < t:
             self.save(wb, queue=queue)
-            self.LAST_SAVE = t
+            self.last_save = t
 
     @classmethod
     def restore(cls, url):
@@ -59,12 +65,12 @@ class Session(object):
             q = ioutils.deserialize(filename + ".session", dir=ioutils.LOGDIR)
             q = recipe.overrule_records(q)
             ioutils.write_err(ansicolor.green("done\n"))
-        return wb, q
+        return cls(wb, q)
 
 
 class SpiderFetcher(object):
-    def __init__(self):
-        self.session = Session()
+    def __init__(self, session):
+        self.session = session
 
     def log_exc(self, exc, url, wb):
         exc_filename = ioutils.safe_filename("exc", dir=ioutils.LOGDIR)
@@ -243,17 +249,17 @@ def run_script():
             os.environ["DEPTH"] = str(opts.depth)
 
         url = args[0]
-        (wb, queue) = Session.restore(url)
+        session = Session.restore(url)
         if opts.recipe:
             rules = recipe.load_recipe(opts.recipe, url)
         else:
             pattern = args[1]
             rules = recipe.get_recipe(pattern, url)
 
-        if queue is None:
-            queue = recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
-        if wb is None:
-            wb = web.Web(url)
+        if session.queue is None:
+            session.queue = recipe.get_queue(url, mode=fetch.Fetcher.SPIDER)
+        if session.wb is None:
+            session.wb = web.Web(url)
 
     except recipe.PatternError as e:
         ioutils.write_err(ansicolor.red("%s\n" % e))
@@ -261,8 +267,8 @@ def run_script():
     except IndexError:
         ioutils.opts_help(None, None, None, parser)
 
-    spiderfetcher = SpiderFetcher()
-    spiderfetcher.main(queue, rules, wb)
+    spiderfetcher = SpiderFetcher(session)
+    spiderfetcher.main(session.queue, rules, session.wb)
 
 
 if __name__ == "__main__":
