@@ -31,23 +31,23 @@ class Session(object):
 
         self.save_interval = 60 * 30  # 30min
 
-    def save(self, wb, queue=None):
-        hostname = urlrewrite.get_hostname(wb.root.url)
+    def save(self):
+        hostname = urlrewrite.get_hostname(self.wb.root.url)
         filename = urlrewrite.hostname_to_filename(hostname)
         ioutils.write_err("Saving session to %s ..." %
                         ansicolor.yellow(filename + ".{web,session}"))
-        ioutils.serialize(wb, filename + ".web", dir=ioutils.LOGDIR)
-        if queue:
-            ioutils.serialize(queue, filename + ".session", dir=ioutils.LOGDIR)
+        ioutils.serialize(self.wb, filename + ".web", dir=ioutils.LOGDIR)
+        if self.queue:
+            ioutils.serialize(self.queue, filename + ".session", dir=ioutils.LOGDIR)
         # only web being saved, ie. spidering complete, remove old session
         elif ioutils.file_exists(filename + ".session", dir=ioutils.LOGDIR):
             ioutils.delete(filename + ".session", dir=ioutils.LOGDIR)
         ioutils.write_err(ansicolor.green("done\n"))
 
-    def maybe_save(self, wb, queue):
+    def maybe_save(self):
         t = time.time()
         if self.last_save + self.save_interval < t:
-            self.save(wb, queue=queue)
+            self.save()
             self.last_save = t
 
     @classmethod
@@ -138,7 +138,7 @@ class SpiderFetcher(object):
     def process_records(self, rule):
         newqueue = []
         for record in self.session.queue:
-            self.session.maybe_save(self.session.wb, self.session.queue)
+            self.session.maybe_save()
 
             url = record.get("url")
             try:
@@ -169,7 +169,8 @@ class SpiderFetcher(object):
             except KeyboardInterrupt:
                 q = self.session.queue[self.session.queue.index(record):]
                 q.extend(newqueue)
-                self.session.save(self.session.wb, queue=q)
+                self.session.queue = q
+                self.session.save()
                 sys.exit(1)
             except Exception as exc:
                 self.log_exc(exc, url)
