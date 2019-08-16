@@ -228,7 +228,7 @@ class SpiderFetcher(object):
 
                 self.session.queue = self.process_records(rule)
 
-        self.session.save(self.session.wb)
+        self.session.save()
 
 
 def run_script():
