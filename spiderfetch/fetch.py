@@ -19,7 +19,6 @@ from spiderfetch import urlrewrite
 from spiderfetch.compat import ContentTooShortError
 from spiderfetch.compat import FancyURLopener
 from spiderfetch.compat import ftpwrapper
-from spiderfetch.compat import splittype
 from spiderfetch.compat import unwrap
 from spiderfetch.compat import urlparse
 
@@ -224,7 +223,9 @@ class MyURLopener(FancyURLopener):
         url = unwrap(url)
         if self.tempcache and url in self.tempcache:
             return self.tempcache[url]
-        type, url1 = splittype(url)
+        st = urllib.parse.urlparse(url)
+        type = st[0]
+        url1 = st[2]
         if filename is None and (not type or type == 'file'):
             try:
                 fp = self.open_local_file(url1)

@@ -58,6 +58,8 @@ FTP_LISTING = re.compile(_ftp_listing)
 
 
 def find_with_r(r, s):
+    if type(s) is bytes:
+        s = s.decode()
     return re.finditer(r, s)
 
 def spider_ftp(s):
@@ -116,6 +118,9 @@ def colorize_shell(str, url=None):
 
     spanlists = [map(lambda m: m.span('url'), regexs[rx_id])
                  for rx_id in sorted(regexs.keys())]
+
+    if type(str) is bytes:
+        str = str.decode()
     return ansicolor.highlight_string(str, *spanlists)
 
 
@@ -131,7 +136,7 @@ if __name__ == "__main__":
             data = testcases
         else:
             url = args[0]
-            data = urllib.urlopen(url).read()
+            data = urllib.request.urlopen(url).read()
 
         if opts.dump:
             for u in unique(unbox_it_to_ss(findall(data, url))):

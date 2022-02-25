@@ -29,10 +29,6 @@ try:
 except ImportError:
     from urllib.request import ftpwrapper  # noqa
 
-try:
-    from urllib import splittype
-except ImportError:
-    from urllib.request import splittype  # noqa
 
 try:
     from urllib import unwrap
